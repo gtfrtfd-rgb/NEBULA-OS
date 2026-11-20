@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NEBULA OS — веб-операционная система</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='2.6' fill='%237c6bff'/%3E%3Cpath d='M20.5 12a8.5 8.5 0 1 1-8.5-8.5' stroke='%2322d3ee' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3Cpath d='M12 6.5A5.5 5.5 0 1 1 6.5 12' stroke='%23ff4fa3' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/windows.css">
+<link rel="stylesheet" href="css/shell.css">
+<link rel="stylesheet" href="css/apps.css">
+</head>
+<body class="locked">
+
+<canvas id="wallpaper"></canvas>
+<div id="grain"></div>
+<div id="vignette"></div>
+
+<div id="desktop">
+  <div id="desktopIcons"></div>
+  <div id="widget">
+    <div id="wTime">00:00</div>
+    <div id="wDate"></div>
+    <div class="wchips">
+      <button class="wchip" id="wSound" title="Отключить весь звук"></button>
+      <span class="wchip" id="wWifi"></span>
+      <span class="wchip" id="wUptime"></span>
+    </div>
+  </div>
+</div>
+
+<div id="snapPreview"></div>
+<div id="windows"></div>
+<div id="toasts"></div>
+
+<div id="taskbar">
+  <button id="startBtn" aria-label="Меню Пуск" title="Пуск"></button>
+  <button id="searchPill" aria-label="Поиск"></button>
+  <div class="tb-sep"></div>
+  <div id="dockApps"></div>
+  <div class="tb-sep"></div>
+  <div id="trayMusic">
+    <span class="tm-dot"></span><span class="tm-name"></span>
+    <button class="tm-btn" id="tmPlay" aria-label="Пауза/продолжить"></button>
+    <button class="tm-btn" id="tmStop" aria-label="Остановить эфир"></button>
+  </div>
+  <button class="tray-btn" id="trayQuick" data-pop="quick" aria-label="Быстрые настройки"></button>
+  <button class="tray-btn" id="trayBell" data-pop="notif" aria-label="Уведомления"><span id="bellBadge"></span></button>
+  <button class="tray-btn" id="trayClock" data-pop="calendar" aria-label="Календарь"><span id="tbTime"></span><span id="tbDate"></span></button>
+  <button id="showDesktop" title="Показать рабочий стол" aria-label="Показать рабочий стол"></button>
+</div>
+
+<div id="startMenu" role="menu" aria-label="Меню Пуск">
+  <div class="sm-head">
+    <div class="avatar"><div>🧑‍🚀</div></div>
+    <div class="sm-user"><b id="smName">Космонавт</b><span>Локальная учётная запись · NEBULA</span></div>
+    <button class="ibtn" id="smSettings" title="Настройки" aria-label="Настройки"></button>
+  </div>
+  <div class="sm-search"><span id="smSearchIcon"></span><input id="smSearch" type="text" placeholder="Поиск приложений и файлов…" autocomplete="off"></div>
+  <div id="smBody"></div>
+  <div class="sm-foot">
+    <button class="pw-btn" id="smLock"></button>
+    <div class="spacer"></div>
+    <button class="pw-btn" id="smRestart"></button>
+    <button class="pw-btn danger" id="smShutdown"></button>
+  </div>
+</div>
+
+<div id="popover"></div>
+<div id="contextMenu"></div>
+<div id="dialogLayer"></div>
+
+<div id="lockScreen" class="fullscreen">
+  <div id="lockTime">00:00</div>
+  <div id="lockDate"></div>
+  <div class="lock-avatar"><div>🧑‍🚀</div></div>
+  <div id="lockName">Космонавт</div>
+  <button id="loginBtn">Войти в систему</button>
+  <div class="lock-hint">Пароль не требуется — это ваш космос · Enter</div>
+  <div class="lock-power">
+    <button id="lockRestart" title="Перезагрузка" aria-label="Перезагрузка"></button>
+    <button id="lockShutdown" title="Выключение" aria-label="Выключение"></button>
+  </div>
+</div>
+
+<div id="bootScreen" class="fullscreen">
+  <svg class="boot-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+    <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
+    <g class="orbit"><path d="M20.5 12a8.5 8.5 0 1 1-8.5-8.5" stroke="#22d3ee"/><circle cx="20.5" cy="12" r="1.1" fill="#22d3ee" stroke="none"/></g>
+    <g class="orbit2"><path d="M12 6.5A5.5 5.5 0 1 1 6.5 12" stroke="#ff4fa3"/><circle cx="12" cy="6.5" r=".9" fill="#ff4fa3" stroke="none"/></g>
+    <circle cx="4.5" cy="4.5" r=".6" fill="#ffb454" stroke="none"/><circle cx="19.5" cy="19.5" r=".5" fill="#eef0ff" stroke="none"/>
+  </svg>
+  <div class="boot-word">NEBULA</div>
+  <div class="boot-sub">OS · 1.0 «Пульсар»</div>
+  <div class="boot-track"><div id="bootBar"></div></div>
+  <div id="bootLog"></div>
+  <button id="bootSkip">Пропустить →</button>
+</div>
+
+<div id="shutdownScreen" class="fullscreen">
+  <button id="powerOn" aria-label="Включить"></button>
+  <div class="sd-text">Питание отключено</div>
+</div>
+
+<noscript><div style="position:fixed;inset:0;z-index:99999;background:#05060f;color:#eef0ff;display:flex;align-items:center;justify-content:center;font-family:sans-serif;text-align:center;padding:24px">NEBULA OS требует включённый JavaScript.</div></noscript>
+
+<script>
+/* ES-модули не работают с file:// — показываем подсказку вместо пустого экрана */
+if(location.protocol==='file:'){
+  addEventListener('DOMContentLoaded',()=>{
+    const b=document.getElementById('bootScreen');
+    if(b)b.innerHTML='<div style="max-width:420px;text-align:center;font-family:Manrope,sans-serif;color:#eef0ff;padding:24px"><div style="font-size:40px;margin-bottom:14px">🛸</div><div style="font-weight:800;font-size:17px;margin-bottom:8px">Нужен локальный сервер</div><p style="color:#a6abd4;font-size:13px;line-height:1.7;margin-bottom:16px">NEBULA OS собрана на ES-модулях, а браузер блокирует их при открытии через file://. Запустите в папке проекта:</p><code style="display:block;background:#141631;border:1px solid rgba(151,161,255,.3);border-radius:10px;padding:12px;font-family:monospace;font-size:13px;color:#22d3ee">python3 -m http.server 8080</code><p style="color:#7076a3;font-size:12px;margin-top:14px">затем откройте http://localhost:8080</p></div>';
+  });
+}
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
