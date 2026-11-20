@@ -1,0 +1,1 @@
+export const session={bootTime:Date.now(),loggedIn:false,welcomed:false};
