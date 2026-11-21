@@ -1,4 +1,5 @@
-import {$,$$,icon,esc,tileHtml,fmtBytes,fmtUp} from '../core/utils.js';
+import {$,$$,esc,fmtBytes,fmtUp,clamp} from '../core/utils.js';
+import {icon,tileHtml} from '../core/icons.js';
 import {settings,setSetting,ACCENTS,WALL_NAMES} from '../core/settings.js';
 import {bus} from '../core/bus.js';
 import {store} from '../core/store.js';

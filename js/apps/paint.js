@@ -1,7 +1,9 @@
-import {$,$$,icon} from '../core/utils.js';
+import {$,$$} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {Audio} from '../core/audio.js';
 import {notify} from '../core/notifications.js';
-import {addNode,mkImg,nodeAt} from '../core/vfs.js';
+import {addNode,mkImg,mkDir,nodeAt} from '../core/vfs.js';
+import {WM} from '../wm.js';
 
 export default {name:'Графика',icon:'brush',g:['#ff4fa3','#ffb454'],w:960,h:640,minW:560,minH:440,
 mount(body,win,params){

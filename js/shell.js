@@ -1,4 +1,4 @@
-import {$,$$,esc,el,fmtClock,fmtUp,isCoarse} from './core/utils.js';
+import {$,$$,esc,fmtClock,fmtUp,isCoarse,clamp,relTime} from './core/utils.js';
 import {icon,tileHtml,batteryIcon} from './core/icons.js';
 import {settings,setSetting,WALL_NAMES} from './core/settings.js';
 import {bus} from './core/bus.js';

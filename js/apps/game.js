@@ -1,4 +1,5 @@
-import {$,el,icon,fmtSec,clamp,isMobile} from '../core/utils.js';
+import {$,el,fmtSec,clamp,isMobile} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {store} from '../core/store.js';
 import {notify} from '../core/notifications.js';
 import {Audio} from '../core/audio.js';
@@ -7,7 +8,7 @@ import {WM} from '../wm.js';
 export default {name:'Сапёр',icon:'bomb',g:['#ff5470','#ff9f43'],w:400,h:560,minW:330,minH:420,single:true,center:true,
 mount(body,win){
   const DIFFS={novice:{name:'Новичок',cols:9,rows:9,mines:10},amateur:{name:'Любитель',cols:16,rows:16,mines:40},expert:{name:'Эксперт',cols:20,rows:14,mines:55}};
-  let diff='novice',cells=[],started=false,over=false,won=false,flags=0,revealed=0,time=0,timer=null,flagMode=false,timeouts=[];
+  let diff='novice',cells=[],started=false,over=false,flags=0,revealed=0,time=0,timer=null,flagMode=false,timeouts=[];
   let best=store.get('nebula.best.v1',{});
   body.innerHTML=`<div class="game">
     <div class="g-head">
@@ -27,7 +28,7 @@ mount(body,win){
     board.style.setProperty('--cell',c+'px');board.style.setProperty('--cols',d.cols);}
   function reset(){
     timeouts.forEach(clearTimeout);timeouts=[];clearInterval(timer);timer=null;
-    started=false;over=false;won=false;flags=0;revealed=0;time=0;
+    started=false;over=false;flags=0;revealed=0;time=0;
     const d=DIFFS[diff];
     cells=Array.from({length:d.cols*d.rows},()=>({mine:false,rev:false,flag:false,n:0}));
     board.innerHTML=cells.map((_,i)=>`<button class="cell" data-i="${i}" data-snd-skip aria-label="клетка"></button>`).join('');
@@ -54,7 +55,7 @@ mount(body,win){
       if(c.n===0&&!c.mine)neighbors(j).forEach(n=>{if(!cells[n].rev&&!cells[n].flag)stack.push(n);});}}
   function tick(){time=Math.min(999,time+1);$('.g-time b',body).textContent=fmtSec(time);}
   function checkWin(){const d=DIFFS[diff];
-    if(revealed===d.cols*d.rows-d.mines){over=true;won=true;clearInterval(timer);
+    if(revealed===d.cols*d.rows-d.mines){over=true;clearInterval(timer);
       cells.forEach((c,i)=>{if(c.mine&&!c.flag){c.flag=true;flags++;paintCell(i);}});
       $('.g-mines b',body).textContent=0;$('.g-face',body).textContent='😎';Audio.sfx('win');
       let rec='';if(!best[diff]||time<best[diff]){best[diff]=time;store.set('nebula.best.v1',best);rec=' Новый рекорд!';$('.g-best',body).textContent=`рекорд: ${fmtSec(time)}`;}

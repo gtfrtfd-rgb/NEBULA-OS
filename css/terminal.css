@@ -1,0 +1,25 @@
+/* NEBULA OS — терминал: справка, neofetch, подсказки */
+.term-help{ padding:2px 0 8px; }
+.th-title{ color:#9d8fff; font-weight:700; margin-bottom:2px; }
+.th-hint{ color:#6b7099; font-size:11px; margin-bottom:4px; }
+.th-group{ color:#7076a3; font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; margin:12px 0 5px; display:flex; align-items:center; gap:9px; }
+.th-group::after{ content:''; flex:1; height:1px; background:rgba(151,161,255,.14); }
+.th-row{ display:grid; grid-template-columns:23ch 1fr; column-gap:16px; padding:1.5px 0; align-items:baseline; }
+.th-cmd{ color:#22d3ee; font:inherit; font-weight:500; overflow-wrap:anywhere; }
+.th-desc{ color:#8a90c0; }
+.th-row:hover .th-cmd{ color:#7ee7f5; }
+.th-row:hover .th-desc{ color:#a6abd4; }
+
+.term-fetch{ display:flex; gap:20px; align-items:flex-start; padding:6px 0 4px; flex-wrap:wrap; }
+.tf-art{ color:#9d8fff; margin:0; text-shadow:0 0 16px rgba(124,107,255,.5); line-height:1.5; }
+.tf-info{ display:flex; flex-direction:column; gap:1px; min-width:210px; }
+.tf-head{ color:#34e0a1; font-weight:700; }
+.tf-sep{ color:#3a3f66; }
+.tf-row{ display:grid; grid-template-columns:11ch 1fr; gap:10px; }
+.tf-k{ color:#22d3ee; font-weight:700; }
+.tf-v{ color:#dbe4ff; overflow-wrap:anywhere; }
+.tf-pal{ display:flex; gap:5px; margin-top:8px; }
+.tf-pal i{ width:15px; height:15px; border-radius:4px; display:block; box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
+
+.term-suggest{ color:#ffb454; }
+.term-tree-sum{ color:#6b7099; margin-top:2px; }

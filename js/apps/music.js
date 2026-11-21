@@ -1,4 +1,5 @@
-import {$,icon,fmtSec} from '../core/utils.js';
+import {$,fmtSec} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {Music} from '../core/music.js';
 import {Audio} from '../core/audio.js';
 import {settings,setSetting} from '../core/settings.js';

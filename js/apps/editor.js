@@ -1,4 +1,5 @@
-import {$,esc,icon} from '../core/utils.js';
+import {$,esc} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {Audio} from '../core/audio.js';
 import {bus} from '../core/bus.js';
 import {notify} from '../core/notifications.js';

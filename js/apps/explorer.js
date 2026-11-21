@@ -1,9 +1,11 @@
-import {$,$$,esc,el,icon,fmtBytes,relTime,isCoarse} from '../core/utils.js';
+import {$,$$,esc,el,fmtBytes,relTime,isCoarse} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {settings,setSetting} from '../core/settings.js';
 import {bus} from '../core/bus.js';
 import {notify} from '../core/notifications.js';
+import {openContext} from '../core/context.js';
 import {openFileNode} from '../core/launch.js';
-import {normPath,parentPath,baseName,nodeAt,addNode,removeNode,restoreNode,renameNode,findPathById,recentFiles,mkDir,mkText} from '../core/vfs.js';
+import {normPath,parentPath,baseName,nodeAt,nodeSize,addNode,removeNode,restoreNode,renameNode,findPathById,recentFiles,mkDir,mkText} from '../core/vfs.js';
 
 export default {name:'Файлы',icon:'folder',g:['#ffb454','#ff6a3d'],w:780,h:520,minW:420,minH:300,
 mount(body,win,params){

@@ -1,4 +1,5 @@
-import {$,el,icon,clamp} from '../core/utils.js';
+import {$,el,clamp} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {nodeAt,findPathById} from '../core/vfs.js';
 import {bus} from '../core/bus.js';
 import {WM} from '../wm.js';

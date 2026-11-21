@@ -1,4 +1,5 @@
-import {$,icon,esc,clamp,hexRgb,fmtUp} from '../core/utils.js';
+import {$,esc,clamp,hexRgb,fmtUp} from '../core/utils.js';
+import {icon} from '../core/icons.js';
 import {WM} from '../wm.js';
 import {Music} from '../core/music.js';
 import {Wall} from '../core/wallpaper.js';

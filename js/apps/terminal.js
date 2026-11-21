@@ -1,6 +1,7 @@
 import {$,esc,fmtBytes,fmtUp} from '../core/utils.js';
 import {settings,setSetting,ACCENTS,WALL_NAMES} from '../core/settings.js';
 import {bus} from '../core/bus.js';
+import {store} from '../core/store.js';
 import {session} from '../core/session.js';
 import {Audio} from '../core/audio.js';
 import {Music} from '../core/music.js';
@@ -8,9 +9,66 @@ import {Wall} from '../core/wallpaper.js';
 import {notify} from '../core/notifications.js';
 import {WM} from '../wm.js';
 import {Apps} from './index.js';
-import {joinPath,nodeAt,parentPath,baseName,addNode,removeNode,restoreNode,mkText,mkDir,saveVfs} from '../core/vfs.js';
+import {VFS_KEY,joinPath,nodeAt,nodeSize,parentPath,baseName,addNode,removeNode,restoreNode,mkText,mkDir,saveVfs} from '../core/vfs.js';
 
-export default {name:'Терминал',icon:'terminal',g:['#232849','#4a5382'],w:660,h:430,minW:420,minH:260,
+const CMDS=['help','ls','cd','pwd','cat','touch','mkdir','rm','tree','echo','clear','date','whoami','neofetch','open','theme','wallpaper','music','notify','uptime','history','sudo','reboot','exit','about'];
+const APP_ALIAS={'файлы':'explorer','explorer':'explorer','проводник':'explorer','терминал':'terminal','terminal':'terminal','блокнот':'editor','editor':'editor','калькулятор':'calc','calc':'calc','графика':'paint','paint':'paint','музыка':'music','music':'music','волна':'music','сапёр':'game','game':'game','сапер':'game','монитор':'monitor','monitor':'monitor','настройки':'settings','settings':'settings','просмотр':'viewer','viewer':'viewer','справка':'help','help':'help'};
+const HELP_GROUPS=[
+  ['Файловая система',[
+    ['ls [путь]','содержимое папки'],
+    ['cd <путь>','сменить папку (.. — вверх, ~ — корень)'],
+    ['pwd','текущая папка'],
+    ['cat <файл>','прочитать файл'],
+    ['touch <имя>','создать пустой файл'],
+    ['mkdir <имя>','создать папку'],
+    ['rm [-r] <имя>','удалить (-r для папок)'],
+    ['tree [путь]','дерево каталогов'],
+    ['echo текст > файл','записать текст в файл'],
+  ]],
+  ['Приложения и медиа',[
+    ['open <приложение>','запустить: файлы, блокнот, графика, музыка, сапёр…'],
+    ['open файлы ~/Путь','открыть папку или файл в приложении'],
+    ['music play|stop|next','управление Волной FM'],
+  ]],
+  ['Оформление',[
+    ['theme <цвет>','violet · cyan · magenta · amber · lime · azure'],
+    ['wallpaper <1-4>','Аврора · Туманность · Пульсар · Закат'],
+  ]],
+  ['Система',[
+    ['neofetch','сведения о системе и палитра'],
+    ['date','текущая дата и время'],
+    ['uptime','время работы сессии'],
+    ['whoami','имя пользователя'],
+    ['notify <текст>','проверить центр уведомлений'],
+    ['about','версия и сборка'],
+  ]],
+  ['Оболочка',[
+    ['history','история команд (↑ / ↓)'],
+    ['clear','очистить экран (Ctrl+L)'],
+    ['reboot','перезагрузить NEBULA OS'],
+    ['exit','закрыть этот терминал'],
+    ['help','эта справка'],
+  ]],
+];
+
+function lev(a,b){
+  const m=a.length,n=b.length;
+  if(!m)return n;if(!n)return m;
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){const cur=[i];
+    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur;}
+  return prev[n];
+}
+function suggest(cmd){
+  if(cmd.length<2)return null;
+  let best=null,bd=3;
+  for(const k of CMDS){const d=lev(cmd,k);if(d<bd){bd=d;best=k;}}
+  return bd<=2?best:null;
+}
+function fsUsed(){try{return (localStorage.getItem(VFS_KEY)||'').length*2;}catch(e){return 0;}}
+
+export default {name:'Терминал',icon:'terminal',g:['#232849','#4a5382'],w:680,h:460,minW:420,minH:260,
 mount(body,win){
   let cwd='/',hist=[],hi=0;
   body.innerHTML=`<div class="term selectable"><div class="term-out"></div><div class="term-inrow"><span class="term-ps"></span><input spellcheck="false" autocomplete="off" aria-label="Командная строка"></div></div>`;
@@ -21,24 +79,75 @@ mount(body,win){
   function print(html,cls=''){const d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=html;out.appendChild(d);
     while(out.children.length>600)out.firstElementChild.remove();out.scrollTop=out.scrollHeight;}
   const echoCmd=c=>print(promptHtml()+esc(c));
-  print(`<span class="acc">NEBULA Shell 1.0</span> <span class="dim">— оболочка Звёздного Совета</span>`);
-  print(`<span class="dim">Введите</span> <span class="info">help</span><span class="dim">, чтобы увидеть список команд.</span>`);
-  print('');
-  const APP_ALIAS={'файлы':'explorer','explorer':'explorer','проводник':'explorer','терминал':'terminal','terminal':'terminal','блокнот':'editor','editor':'editor','калькулятор':'calc','calc':'calc','графика':'paint','paint':'paint','музыка':'music','music':'music','волна':'music','сапёр':'game','game':'game','сапер':'game','монитор':'monitor','monitor':'monitor','настройки':'settings','settings':'settings','просмотр':'viewer','viewer':'viewer','справка':'help','help':'help'};
-  const CMDS=['help','ls','cd','pwd','cat','touch','mkdir','rm','echo','clear','date','whoami','neofetch','open','theme','wallpaper','music','notify','uptime','history','sudo','reboot','exit','about'];
+  const ok=t=>print(esc(t),'ok'),err=t=>print(esc(t),'err'),info=t=>print(esc(t),'info'),dim=t=>print(esc(t),'dim');
   function resolve(p){return joinPath(cwd,p||'.');}
+
+  print(`<span class="acc">NEBULA Shell 1.0</span> <span class="dim">— оболочка Звёздного Совета</span>`);
+  print(`<span class="dim">Введите</span> <span class="info">help</span><span class="dim">, чтобы увидеть команды.</span>`);
+  print(`<span class="dim">Tab — автодополнение · ↑↓ — история · Ctrl+L — очистить · Ctrl+C — сброс строки</span>`);
+  print('');
+
+  function printHelp(){
+    let html='<div class="term-help"><div class="th-title">NEBULA Shell — команды</div><div class="th-hint">Клик по строке не выполняет команду — наберите её и нажмите Enter.</div>';
+    HELP_GROUPS.forEach(([g,rows])=>{
+      html+=`<div class="th-group">${esc(g)}</div>`;
+      rows.forEach(([c,d])=>{html+=`<div class="th-row"><code class="th-cmd">${esc(c)}</code><span class="th-desc">${esc(d)}</span></div>`;});
+    });
+    html+='</div>';
+    print(html);
+  }
+  function printFetch(){
+    const art=['   ·  ✦  ·  * ','  ┌─────────┐ ','  │  ◕   ◕  │ ','  │    ▽    │ ','  └─────────┘ ','   *  ·  ✦  · '].join('\n');
+    const rows=[
+      ['ОС','NEBULA OS 1.0 «Пульсар»'],
+      ['Ядро','6.2.0-nebula'],
+      ['Аптайм',fmtUp((Date.now()-session.bootTime)/1000)],
+      ['Оболочка','NebulaShell 1.0'],
+      ['Экран',`${innerWidth}×${innerHeight}`],
+      ['Обои',WALL_NAMES[settings.wallpaper]],
+      ['Акцент',ACCENTS[settings.accent].name],
+      ['Окна',String(WM.wins.size)],
+      ['FPS',String(Wall.fps)],
+      ['nebulaFS',fmtBytes(fsUsed())+' / ~5 МБ'],
+    ];
+    const pal=['#7c6bff','#22d3ee','#ff4fa3','#ffb454','#34e0a1','#4f8dff','#ff5470','#a3e635'];
+    let html=`<div class="term-fetch"><pre class="tf-art">${esc(art)}</pre><div class="tf-info">`;
+    html+=`<div class="tf-head">${esc(settings.username)}@nebula</div><div class="tf-sep">──────────────────────</div>`;
+    rows.forEach(([k,v])=>{html+=`<div class="tf-row"><span class="tf-k">${esc(k)}</span><span class="tf-v">${esc(v)}</span></div>`;});
+    html+=`<div class="tf-pal">${pal.map(c=>`<i style="background:${c}"></i>`).join('')}</div>`;
+    html+='</div></div>';
+    print(html);
+  }
+  function printTree(root){
+    const n=nodeAt(root);
+    if(!n){err(`tree: ${root}: нет такого пути`);return;}
+    if(n.type!=='dir'){err(`tree: ${n.name}: это не папка`);return;}
+    print(`<span class="dir">${esc(root==='/'?'~':root)}</span>`);
+    let dirs=0,files=0;
+    const rec=(node,prefix)=>{
+      const kids=[...node.children].sort((a,b)=>(a.type==='dir'?0:1)-(b.type==='dir'?0:1)||a.name.localeCompare(b.name,'ru'));
+      kids.forEach((c,i)=>{
+        const last=i===kids.length-1;
+        const branch=last?'└── ':'├── ';
+        if(c.type==='dir'){dirs++;
+          print(`<span class="dim">${esc(prefix+branch)}</span><span class="dir">${esc(c.name)}/</span>`);
+          rec(c,prefix+(last?'    ':'│   '));}
+        else{files++;
+          print(`<span class="dim">${esc(prefix+branch)}</span>${esc(c.name)} <span class="dim">${fmtBytes(nodeSize(c))}</span>`);}
+      });
+    };
+    rec(n,'');
+    print(`<span class="term-tree-sum">${dirs} папок, ${files} файлов</span>`);
+  }
+
   function exec(raw){
     const line=raw.trim();if(!line){print(promptHtml());return;}
     echoCmd(line);hist.push(line);hi=hist.length;
     const redirect=line.match(/^(.*?)\s*>\s*(\S+)\s*$/);
     const tokens=(redirect?redirect[1]:line).match(/"[^"]*"|\S+/g)||[];
     const cmd=(tokens[0]||'').toLowerCase();const args=tokens.slice(1).map(a=>a.replace(/^"|"$/g,''));
-    const ok=t=>print(esc(t),'ok'),err=t=>print(esc(t),'err'),info=t=>print(esc(t),'info'),dim=t=>print(esc(t),'dim');
     try{switch(cmd){
-      case'help':{
-        print(`<span class="acc">Доступные команды:</span>`);
-        const rows=[['ls [путь]','содержимое папки'],['cd <путь>','сменить папку (.. — вверх)'],['pwd','текущая папка'],['cat <файл>','прочитать файл'],['touch <имя>','создать файл'],['mkdir <имя>','создать папку'],['rm [-r] <имя>','удалить (-r для папок)'],['echo текст > файл','записать текст в файл'],['open <приложение>','запустить приложение'],['theme <цвет>','violet cyan magenta amber lime azure'],['wallpaper <1-4>','сменить обои'],['music play|stop|next','управление Волной FM'],['neofetch','сведения о системе'],['notify <текст>','проверить уведомления'],['date / uptime / whoami','время · аптайм · пользователь'],['history / clear','история · очистить экран'],['reboot / exit','перезагрузка · закрыть терминал']];
-        rows.forEach(([c,d])=>print(`  <span class="info">${esc(c.padEnd(22))}</span><span class="dim">${esc(d)}</span>`));break;}
+      case'help':printHelp();break;
       case'ls':{const p=args[0]?resolve(args[0]):cwd;const n=nodeAt(p);
         if(!n){err(`ls: ${p}: нет такого пути`);break;}
         if(n.type!=='dir'){print(esc(n.name));break;}
@@ -66,6 +175,7 @@ mount(body,win){
         if(n.type==='dir'&&!r){err(`rm: ${n.name}: это папка — используйте rm -r`);break;}
         const rec=removeNode(p);ok(`удалено: ${n.name}`);
         notify('warn','Терминал удалил объект',`«${n.name}»`,{label:'Отменить',fn:()=>restoreNode(rec)},6500);break;}
+      case'tree':printTree(args[0]?resolve(args[0]):cwd);break;
       case'echo':{const text=args.join(' ');
         if(redirect){const fname=redirect[2];const p=resolve(fname);const ex=nodeAt(p);
           if(ex&&ex.type==='dir'){err(`echo: ${fname}: это папка`);break;}
@@ -78,11 +188,7 @@ mount(body,win){
       case'whoami':print(esc(settings.username));break;
       case'uptime':print(`аптайм: ${fmtUp((Date.now()-session.bootTime)/1000)}`);break;
       case'history':hist.forEach((h,i)=>print(`<span class="dim">${String(i+1).padStart(3)}</span>  ${esc(h)}`));break;
-      case'neofetch':{
-        const art=['   ·  ✦  ·  * ','  ┌─────────┐ ','  │  ◕   ◕  │ ','  │    ▽    │ ','  └─────────┘ ','   *  ·  ✦  · '];
-        const inf=[`${settings.username}@nebula`,'─────────────',`ОС: NEBULA OS 1.0 «Пульсар»`,`Ядро: 6.2.0-nebula`,`Аптайм: ${fmtUp((Date.now()-session.bootTime)/1000)}`,`Оболочка: NebulaShell 1.0`,`Экран: ${innerWidth}×${innerHeight}`,`Обои: ${WALL_NAMES[settings.wallpaper]}`,`Акцент: ${ACCENTS[settings.accent].name}`,`Окна: ${WM.wins.size}`,`FPS обоев: ${Wall.fps}`];
-        const rows=Math.max(art.length,inf.length);
-        let html='<pre>';for(let i=0;i<rows;i++){html+=`<span class="acc">${esc((art[i]||'').padEnd(15))}</span>${esc(inf[i]||'')}\n`;}html+='</pre>';print(html);break;}
+      case'neofetch':printFetch();break;
       case'open':{const a=APP_ALIAS[(args[0]||'').toLowerCase()];
         if(!a){err('open: укажите приложение (файлы, блокнот, графика, музыка, сапёр, монитор, настройки, просмотр, справка, калькулятор)');break;}
         let params={};
@@ -107,10 +213,15 @@ mount(body,win){
       case'about':info('NEBULA OS 1.0 «Пульсар» — сборка 2026.11.19. Vanilla JS · Canvas 2D · Web Audio.');break;
       case'reboot':print('Перезагрузка…','warn');setTimeout(()=>bus.emit('power','restart'),400);break;
       case'exit':WM.close(win);break;
-      default:err(`команда не найдена: ${cmd} — введите help`);Audio.sfx('error');
+      default:{err(`команда не найдена: ${cmd}`);
+        const s=suggest(cmd);
+        if(s)print(`возможно, вы имели в виду <span class="info">${esc(s)}</span>? <span class="dim">или введите help</span>`,'term-suggest');
+        else dim('введите help, чтобы увидеть список команд');
+        Audio.sfx('error');}
     }}catch(e){err('ошибка: '+e.message);}
     out.scrollTop=out.scrollHeight;
   }
+
   inp.addEventListener('keydown',e=>{
     e.stopPropagation();
     if(e.key==='Enter'){const v=inp.value;inp.value='';exec(v);}
