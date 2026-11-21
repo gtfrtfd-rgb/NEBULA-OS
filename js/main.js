@@ -4,8 +4,11 @@ import {Wall} from './core/wallpaper.js';
 import {initShell} from './shell.js';
 import {bootSequence} from './boot.js';
 
-applySettings();
-loadVfs();
-Wall.init();
-initShell();
-bootSequence();
+async function start(){
+  applySettings();
+  await loadVfs();
+  Wall.init();
+  initShell();
+  bootSequence();
+}
+start();

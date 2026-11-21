@@ -80,7 +80,7 @@ mount(body,win,params){
     if(!nm){notify('error','Некорректное имя','Укажите имя файла.');return false;}
     const ex=dir.children.find(c=>c.name===nm);
     if(ex&&ex.type!=='text'){notify('error','Имя занято',`«${nm}» — не текстовый файл.`);return false;}
-    if(ex){ex.content=ta.value;ex.mtime=Date.now();node=ex;fileId=ex.id;saveVfs();bus.emit('vfs');}
+    if(ex){ex.content=ta.value;ex.mtime=Date.now();node=ex;fileId=ex.id;saveVfs(ex);bus.emit('vfs');}
     else{node=addNode(dirPath,mkText(nm,ta.value));if(!node)return false;fileId=node.id;}
     api.fileId=fileId;
     savedAt=Date.now();dirty=false;orphan=false;
@@ -93,7 +93,7 @@ mount(body,win,params){
     if(!alive)return await saveAs();
     node=alive;node.content=ta.value;node.mtime=Date.now();
     savedAt=node.mtime;dirty=false;orphan=false;
-    saveVfs();bus.emit('vfs');Audio.sfx('tick');
+    saveVfs(node);bus.emit('vfs');Audio.sfx('tick');
     title();stats();return true;
   }
   async function beforeClose(){
@@ -124,12 +124,7 @@ mount(body,win,params){
     title();stats();
   });
 
-  const api={
-    fileId,
-    isPristine:()=>!fileId&&!dirty&&ta.value==='',
-    beforeClose,
-    onClose:off
-  };
+  const api={fileId,isPristine:()=>!fileId&&!dirty&&ta.value==='',beforeClose,onClose:off};
   title();stats();setTimeout(()=>ta.focus(),80);
   return api;
 }};

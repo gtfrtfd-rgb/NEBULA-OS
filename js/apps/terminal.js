@@ -1,7 +1,6 @@
 import {$,esc,fmtBytes,fmtUp} from '../core/utils.js';
 import {settings,setSetting,ACCENTS,WALL_NAMES} from '../core/settings.js';
 import {bus} from '../core/bus.js';
-import {store} from '../core/store.js';
 import {session} from '../core/session.js';
 import {Audio} from '../core/audio.js';
 import {Music} from '../core/music.js';
@@ -9,9 +8,9 @@ import {Wall} from '../core/wallpaper.js';
 import {notify} from '../core/notifications.js';
 import {WM} from '../wm.js';
 import {Apps} from './index.js';
-import {VFS_KEY,joinPath,nodeAt,nodeSize,parentPath,baseName,addNode,removeNode,restoreNode,mkText,mkDir,saveVfs} from '../core/vfs.js';
+import {joinPath,nodeAt,nodeSize,parentPath,baseName,addNode,removeNode,restoreNode,mkText,mkDir,saveVfs,vfsSize,storageInfo} from '../core/vfs.js';
 
-const CMDS=['help','ls','cd','pwd','cat','touch','mkdir','rm','tree','echo','clear','date','whoami','neofetch','open','theme','wallpaper','music','notify','uptime','history','sudo','reboot','exit','about'];
+const CMDS=['help','ls','cd','pwd','cat','touch','mkdir','rm','tree','echo','clear','date','whoami','neofetch','df','open','theme','wallpaper','music','notify','uptime','history','sudo','reboot','exit','about'];
 const APP_ALIAS={'файлы':'explorer','explorer':'explorer','проводник':'explorer','терминал':'terminal','terminal':'terminal','блокнот':'editor','editor':'editor','калькулятор':'calc','calc':'calc','графика':'paint','paint':'paint','музыка':'music','music':'music','волна':'music','сапёр':'game','game':'game','сапер':'game','монитор':'monitor','monitor':'monitor','настройки':'settings','settings':'settings','просмотр':'viewer','viewer':'viewer','справка':'help','help':'help'};
 const HELP_GROUPS=[
   ['Файловая система',[
@@ -24,6 +23,7 @@ const HELP_GROUPS=[
     ['rm [-r] <имя>','удалить (-r для папок)'],
     ['tree [путь]','дерево каталогов'],
     ['echo текст > файл','записать текст в файл'],
+    ['df','место в IndexedDB: занято / квота'],
   ]],
   ['Приложения и медиа',[
     ['open <приложение>','запустить: файлы, блокнот, графика, музыка, сапёр…'],
@@ -36,6 +36,7 @@ const HELP_GROUPS=[
   ]],
   ['Система',[
     ['neofetch','сведения о системе и палитра'],
+    ['df','квота хранилища nebulaFS'],
     ['date','текущая дата и время'],
     ['uptime','время работы сессии'],
     ['whoami','имя пользователя'],
@@ -66,7 +67,6 @@ function suggest(cmd){
   for(const k of CMDS){const d=lev(cmd,k);if(d<bd){bd=d;best=k;}}
   return bd<=2?best:null;
 }
-function fsUsed(){try{return (localStorage.getItem(VFS_KEY)||'').length*2;}catch(e){return 0;}}
 
 export default {name:'Терминал',icon:'terminal',g:['#232849','#4a5382'],w:680,h:460,minW:420,minH:260,
 mount(body,win){
@@ -76,7 +76,7 @@ mount(body,win){
   const dispPath=()=>cwd==='/'?'~':'~'+cwd;
   const promptHtml=()=>`<span class="p-user">${esc(settings.username.toLowerCase().replace(/\s+/g,''))}@nebula</span><span class="dim">:</span><span class="p-path">${esc(dispPath())}</span><span class="dim">$ </span>`;
   function syncPs(){ps.innerHTML=promptHtml();win.setTitle('Терминал — '+dispPath());}
-  function print(html,cls=''){const d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=html;out.appendChild(d);
+  function print(html,cls=''){if(!out.isConnected)return;const d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=html;out.appendChild(d);
     while(out.children.length>600)out.firstElementChild.remove();out.scrollTop=out.scrollHeight;}
   const echoCmd=c=>print(promptHtml()+esc(c));
   const ok=t=>print(esc(t),'ok'),err=t=>print(esc(t),'err'),info=t=>print(esc(t),'info'),dim=t=>print(esc(t),'dim');
@@ -108,7 +108,7 @@ mount(body,win){
       ['Акцент',ACCENTS[settings.accent].name],
       ['Окна',String(WM.wins.size)],
       ['FPS',String(Wall.fps)],
-      ['nebulaFS',fmtBytes(fsUsed())+' / ~5 МБ'],
+      ['nebulaFS',fmtBytes(vfsSize())+' · IndexedDB'],
     ];
     const pal=['#7c6bff','#22d3ee','#ff4fa3','#ffb454','#34e0a1','#4f8dff','#ff5470','#a3e635'];
     let html=`<div class="term-fetch"><pre class="tf-art">${esc(art)}</pre><div class="tf-info">`;
@@ -164,7 +164,7 @@ mount(body,win){
         else if(n.type==='image')info(`[изображение ${fmtBytes(nodeSize(n))} — откройте: open просмотр]`);
         else print(esc(n.content)||dim('(пустой файл)'));break;}
       case'touch':{if(!args[0]){err('touch: укажите имя файла');break;}const dir=nodeAt(cwd);const ex=dir.children.find(c=>c.name===args[0]);
-        if(ex){ex.mtime=Date.now();saveVfs();bus.emit('vfs');ok(`${ex.name}: время обновлено`);}
+        if(ex){ex.mtime=Date.now();saveVfs(ex);bus.emit('vfs');ok(`${ex.name}: время обновлено`);}
         else{const n=addNode(cwd,mkText(args[0],''));ok(`создан ${n.name}`);}break;}
       case'mkdir':{if(!args[0]){err('mkdir: укажите имя');break;}
         if(nodeAt(resolve(args[0])))err(`mkdir: ${args[0]}: уже существует`);
@@ -179,10 +179,22 @@ mount(body,win){
       case'echo':{const text=args.join(' ');
         if(redirect){const fname=redirect[2];const p=resolve(fname);const ex=nodeAt(p);
           if(ex&&ex.type==='dir'){err(`echo: ${fname}: это папка`);break;}
-          if(ex){ex.content=text;ex.mtime=Date.now();saveVfs();bus.emit('vfs');}
+          if(ex){ex.content=text;ex.mtime=Date.now();saveVfs(ex);bus.emit('vfs');}
           else addNode(parentPath(p),mkText(baseName(p),text));
           ok(`записано в ${fname} (${new Blob([text]).size} Б)`);}
         else print(esc(text));break;}
+      case'df':{
+        dim('запрос к хранилищу…');
+        storageInfo().then(s=>{
+          if(!out.isConnected)return;
+          const pct=s.quota?Math.round(s.usage/s.quota*100):0;
+          print(`<span class="info">nebulaFS</span> <span class="dim">·</span> ${s.mode==='indexeddb'?'IndexedDB':'память (временное хранилище)'}`);
+          print(`  занято:    <span class="ok">${fmtBytes(s.usage||s.treeSize)}</span>${s.quota?` из ${fmtBytes(s.quota)} (${pct}%)`:''}`);
+          print(`  свободно:  ${s.quota?fmtBytes(Math.max(0,s.quota-s.usage)):'—'}`);
+          print(`  файлы:     ${fmtBytes(s.treeSize)} · узлов: ${s.nodes}`);
+          print(`  постоянно: ${s.persisted?'<span class="ok">да — браузер не вытеснит данные</span>':'<span class="warn">нет — включите в Настройках → Система</span>'}`);
+        }).catch(()=>err('df: не удалось получить сведения о хранилище'));
+        break;}
       case'clear':out.innerHTML='';break;
       case'date':print(esc(new Date().toLocaleString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})));break;
       case'whoami':print(esc(settings.username));break;
@@ -210,7 +222,7 @@ mount(body,win){
         else err('music: play · stop · next');break;}
       case'notify':notify('info','Из терминала',args.join(' ')||'привет, космос ✦');ok('уведомление отправлено');break;
       case'sudo':err(`${settings.username} не входит в список sudoers. Инцидент будет доложен Звёздному совету. 🛸`);Audio.sfx('error');break;
-      case'about':info('NEBULA OS 1.0 «Пульсар» — сборка 2026.11.19. Vanilla JS · Canvas 2D · Web Audio.');break;
+      case'about':info('NEBULA OS 1.0 «Пульсар» — сборка 2026.11.19. Vanilla JS · Canvas 2D · Web Audio · IndexedDB.');break;
       case'reboot':print('Перезагрузка…','warn');setTimeout(()=>bus.emit('power','restart'),400);break;
       case'exit':WM.close(win);break;
       default:{err(`команда не найдена: ${cmd}`);

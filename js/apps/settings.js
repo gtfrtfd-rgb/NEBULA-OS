@@ -7,7 +7,7 @@ import {session} from '../core/session.js';
 import {Audio} from '../core/audio.js';
 import {notify} from '../core/notifications.js';
 import {confirmDlg} from '../core/dialogs.js';
-import {VFS_KEY} from '../core/vfs.js';
+import {storageInfo,requestPersist,wipeVfs} from '../core/vfs.js';
 import {paintScene,Wall} from '../core/wallpaper.js';
 import {WM} from '../wm.js';
 
@@ -19,7 +19,26 @@ mount(body,win,params){
   const SECTIONS=[['look','brush','Оформление'],['sound','vol','Звук'],['system','cpu','Система'],['about','info','О системе']];
   function renderNav(){nav.innerHTML=SECTIONS.map(([id,i,n])=>`<button data-s="${id}" class="${id===section?'on':''}">${icon(i,16)}<span>${n}</span></button>`).join('');}
   nav.addEventListener('click',e=>{const b=e.target.closest('button');if(b){section=b.dataset.s;render();}});
-  function storageUsed(){let n=0;['nebula.settings.v1',VFS_KEY,'nebula.best.v1'].forEach(k=>{try{n+=(localStorage.getItem(k)||'').length*2;}catch(e){}});return n;}
+
+  function paintStorage(s){
+    if(!$('.st-used',sb))return;
+    const used=s.usage||s.treeSize;
+    $('.st-used',sb).textContent=fmtBytes(used);
+    $('.st-mode',sb).textContent=s.mode==='indexeddb'?'IndexedDB':'память';
+    $('.st-bar',sb).style.width=(s.quota?clamp(used/s.quota*100,1,100):1)+'%';
+    $('.st-meta',sb).innerHTML=
+      `<span>Квота <b>${s.quota?fmtBytes(s.quota):'—'}</b></span>`+
+      `<span>Файлы <b>${fmtBytes(s.treeSize)}</b></span>`+
+      `<span>Узлов <b>${s.nodes}</b></span>`+
+      `<span>Постоянное <b style="color:${s.persisted?'var(--green)':'var(--amber)'}">${s.persisted?'да':'нет'}</b></span>`;
+    const pb=$('.st-persist',sb);
+    pb.disabled=s.persisted||s.mode!=='indexeddb';
+    pb.innerHTML=s.persisted?icon('check',13)+' Хранилище постоянно':icon('lock',13)+' Сделать постоянным';
+  }
+  function refreshStorage(){
+    storageInfo().then(s=>{if(sb.isConnected)paintStorage(s);}).catch(()=>{});
+  }
+
   function render(){renderNav();
     if(section==='look'){
       sb.innerHTML=`<div class="set-h">Оформление</div><div class="set-sub">Сделайте космос своим — всё применяется мгновенно.</div>
@@ -59,25 +78,40 @@ mount(body,win,params){
       $('.test-snd',sb).addEventListener('click',()=>{Audio.init();Audio.resume();Audio.sfx('chime');});
     }
     else if(section==='system'){
-      const used=storageUsed(),quota=5*1024*1024;
       sb.innerHTML=`<div class="set-h">Система</div><div class="set-sub">Ресурсы, качество и обслуживание.</div>
       <div class="set-row"><div class="sr-t"><b>Имя пользователя</b><span>Отображается на экране входа и в терминале</span></div>
         <input class="inp user-inp" value="${esc(settings.username)}" maxlength="24" style="width:170px"></div>
       <div class="set-row"><div class="sr-t"><b>Качество рендера</b><span>Экономный режим отключает стекло и снижает разрешение обоев</span></div>
         <select class="sel q-sel"><option value="high">Высокое</option><option value="med">Среднее</option><option value="eco">Экономное</option></select></div>
-      <div style="padding:14px 0;border-bottom:1px solid var(--border)">
-        <div class="sr-t"><b style="font-size:13px">Хранилище nebulaFS</b><span style="font-size:11.5px;color:var(--faint)">${fmtBytes(used)} из ~5 МБ · файлы, настройки, рекорды</span></div>
-        <div class="storage-bar"><i style="width:${clamp(used/quota*100,1,100)}%"></i></div></div>
-      <div style="padding:16px 0;display:flex;gap:9px;flex-wrap:wrap">
+      <div class="mon-card" style="margin:14px 0">
+        <div class="mc-l"><span>Хранилище nebulaFS</span><span class="st-mode">…</span></div>
+        <div class="mc-v st-used">…</div>
+        <div class="storage-bar"><i class="st-bar" style="width:1%"></i></div>
+        <div class="mon-meta st-meta"><span>запрос к IndexedDB…</span></div>
+        <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
+          <button class="btn sm st-refresh">${icon('restart',13)} Обновить</button>
+          <button class="btn sm st-persist">${icon('lock',13)} Сделать постоянным</button>
+        </div>
+        <p style="font-size:11px;color:var(--faint);margin-top:10px;line-height:1.55">Файлы хранятся в IndexedDB — квота зависит от свободного места на диске (обычно десятки гигабайт). Постоянное хранилище запрещает браузеру вытеснять данные при нехватке места.</p>
+      </div>
+      <div style="padding:4px 0 16px;display:flex;gap:9px;flex-wrap:wrap">
         <button class="btn open-mon">${icon('activity',14)} Монитор системы</button>
         <button class="btn danger reset-os">${icon('alert',14)} Сбросить NEBULA OS</button></div>`;
       $('.q-sel',sb).value=settings.quality;
       $('.q-sel',sb).addEventListener('change',e=>setSetting('quality',e.target.value));
       $('.user-inp',sb).addEventListener('change',e=>{const v=e.target.value.trim()||'Космонавт';setSetting('username',v);notify('success','Имя обновлено',`Теперь вы — ${v}.`);});
       $('.open-mon',sb).addEventListener('click',()=>WM.open('monitor'));
+      $('.st-refresh',sb).addEventListener('click',refreshStorage);
+      $('.st-persist',sb).addEventListener('click',async e=>{
+        const b=e.currentTarget;b.disabled=true;b.innerHTML=`<span class="spin">${icon('restart',13)}</span> Запрос…`;
+        const ok=await requestPersist();
+        notify(ok?'success':'warn','Постоянное хранилище',ok?'Браузер больше не вытеснит файлы NEBULA OS.':'Браузер отклонил запрос. Данные всё равно сохранятся, но могут быть вытеснены при нехватке места.');
+        refreshStorage();});
       $('.reset-os',sb).addEventListener('click',async()=>{
-        const yes=await confirmDlg({title:'Сбросить систему?',msg:'Все файлы, рисунки, настройки и рекорды будут удалены безвозвратно. NEBULA перезагрузится с заводским содержимым.',ok:'Стереть всё',danger:true});
-        if(yes){['nebula.settings.v1',VFS_KEY,'nebula.best.v1'].forEach(store.del);location.reload();}});
+        const yes=await confirmDlg({title:'Сбросить систему?',msg:'Все файлы, рисунки, настройки и рекорды будут удалены безвозвратно. База IndexedDB будет очищена, NEBULA перезагрузится с заводским содержимым.',ok:'Стереть всё',danger:true});
+        if(yes){try{await wipeVfs();}catch(e){}
+          store.del('nebula.settings.v1');store.del('nebula.best.v1');location.reload();}});
+      refreshStorage();
     }
     else{
       sb.innerHTML=`<div class="set-h">О системе</div><div class="set-sub">Паспорт космического аппарата.</div>
@@ -86,7 +120,7 @@ mount(body,win,params){
         <dt>Ядро</dt><dd>6.2.0-nebula</dd>
         <dt>Оболочка</dt><dd>NebulaShell 1.0</dd>
         <dt>Движок</dt><dd>Vanilla JS · Canvas 2D · Web Audio</dd>
-        <dt>Файловая система</dt><dd>nebulaFS (localStorage)</dd>
+        <dt>Файловая система</dt><dd>nebulaFS (IndexedDB)</dd>
         <dt>Экран</dt><dd>${innerWidth} × ${innerHeight}</dd>
         <dt>Платформа</dt><dd>${esc(navigator.userAgentData?.platform||navigator.platform||'космос')}</dd>
         <dt>Аптайм</dt><dd class="about-up">${fmtUp((Date.now()-session.bootTime)/1000)}</dd></dl>
@@ -99,6 +133,7 @@ mount(body,win,params){
     if(k==='volume'){const r=$('.vol-range',sb);if(r){r.value=settings.volume;r.style.setProperty('--val',r.value+'%');$('.vol-label',sb)?.replaceChildren(settings.volume+'%');}}
     if(k==='sound'){const t=$('[data-set="sound"]',sb);if(t)t.checked=settings.sound;}
     if(k==='musicVol'){const r=$('.mvol-range',sb);if(r){r.value=settings.musicVol;r.style.setProperty('--val',r.value+'%');}}});
+  const offVfs=bus.on('vfs',()=>{if(section==='system')refreshStorage();});
   render();
-  return{onClose:off,remount(p){if(p.section){section=p.section;render();}}};
+  return{onClose(){off();offVfs();},remount(p){if(p.section){section=p.section;render();}}};
 }};
