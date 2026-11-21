@@ -5,20 +5,26 @@
 
 #desktop{ position:fixed; inset:0 0 var(--work-bottom) 0; z-index:2; }
 body.locked #desktop, body.locked #taskbar, body.locked #windows{ visibility:hidden; }
-#desktopIcons{ position:absolute; top:14px; left:12px; display:flex; flex-direction:column; flex-wrap:wrap; gap:4px; max-height:calc(100% - 24px); align-content:flex-start; }
-.dicon{ width:88px; display:flex; flex-direction:column; align-items:center; gap:7px; padding:9px 4px 7px; border-radius:12px; border:1px solid transparent; transition:background .15s,border-color .15s,transform .15s; }
-.dicon:hover{ background:rgba(255,255,255,.09); }
-.dicon:active{ transform:scale(.96); }
-.dicon.sel{ background:var(--acc-20); border-color:var(--acc-35); }
-.dicon .tile{ width:54px; height:54px; border-radius:15px; }
-.dicon span{ font-size:12px; font-weight:600; color:#fff; text-align:center; line-height:1.25; text-shadow:0 1px 8px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.7); max-width:84px; }
-body.entered .dicon{ animation:iconIn .5s cubic-bezier(.2,.9,.3,1.2) both; animation-delay:calc(var(--i)*60ms); }
+
+/* сетка иконок: фиксированные ячейки — наложение и сжатие невозможны */
+#desktopIcons{ position:absolute; top:14px; left:12px; height:calc(100% - 24px); display:grid; grid-auto-flow:column; grid-template-rows:repeat(auto-fill,104px); grid-auto-columns:88px; gap:4px; align-content:start; justify-content:start; }
+.dicon{ width:88px; height:104px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; padding:8px 4px 6px; border-radius:12px; border:1px solid transparent; overflow:hidden; transition:background .15s,border-color .15s,box-shadow .15s,transform .16s cubic-bezier(.2,.9,.3,1.25); }
+.dicon:hover{ background:rgba(255,255,255,.1); transform:translateY(-2px); }
+.dicon:hover .tile{ box-shadow:0 12px 28px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.32); }
+.dicon:active{ transform:translateY(0) scale(.97); }
+.dicon.sel{ background:var(--acc-20); border-color:var(--acc-35); box-shadow:0 0 0 1px var(--acc-20),0 8px 22px rgba(0,0,0,.28); }
+.dicon:focus-visible{ outline:2px solid var(--acc); outline-offset:-2px; }
+.dicon .tile{ flex:0 0 54px; width:54px; height:54px; min-width:54px; min-height:54px; border-radius:15px; transition:box-shadow .16s; }
+.dicon>span:not(.tile){ flex:0 0 auto; font-size:12px; font-weight:600; color:#fff; text-align:center; line-height:1.25; text-shadow:0 1px 8px rgba(0,0,0,.95),0 0 3px rgba(0,0,0,.85); max-width:80px; max-height:30px; overflow:hidden; word-break:break-word; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.tile.launching{ animation:tileLaunch .45s cubic-bezier(.2,.9,.3,1.4); }
+@keyframes tileLaunch{ 0%{ transform:scale(1);} 30%{ transform:scale(.86);} 62%{ transform:scale(1.09); filter:brightness(1.35);} 100%{ transform:scale(1);} }
+body.entered .dicon{ animation:iconIn .5s cubic-bezier(.2,.9,.3,1.2) backwards; animation-delay:calc(var(--i)*55ms); }
 @keyframes iconIn{ from{ opacity:0; transform:translateY(14px) scale(.85);} to{ opacity:1; transform:none;} }
 @keyframes fadeUp{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:none;} }
 @keyframes pulse{ 50%{ transform:scale(1.6); opacity:.6;} }
 
 #widget{ position:absolute; top:22px; right:26px; text-align:right; pointer-events:none; }
-body.entered #widget{ animation:fadeUp .8s .35s both; }
+body.entered #widget{ animation:fadeUp .8s .35s backwards; }
 #wTime{ font-family:var(--f-d); font-weight:300; font-size:56px; letter-spacing:2px; color:#fff; opacity:.94; text-shadow:0 0 34px var(--acc-35),0 2px 14px rgba(0,0,0,.6); line-height:1.05; }
 #wDate{ font-size:13px; font-weight:600; color:#cfd3ff; text-shadow:0 1px 8px rgba(0,0,0,.8); margin-top:2px; text-transform:capitalize; }
 .wchips{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
@@ -28,7 +34,7 @@ button.wchip:hover{ background:rgba(30,34,70,.7); border-color:var(--acc-35); }
 
 /* панель задач */
 #taskbar{ position:fixed; left:10px; right:10px; bottom:10px; height:var(--tb-h); z-index:9000; display:flex; align-items:center; gap:6px; padding:0 8px; background:var(--tb); backdrop-filter:blur(22px) saturate(1.5); -webkit-backdrop-filter:blur(22px) saturate(1.5); border:1px solid var(--border2); border-radius:16px; box-shadow:0 14px 44px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07); }
-body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) both; }
+body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) backwards; }
 @keyframes tbIn{ from{ opacity:0; transform:translateY(70px);} to{ opacity:1; transform:none;} }
 #startBtn{ width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--acc),var(--acc-b)); color:var(--acc-contrast); box-shadow:0 4px 16px var(--acc-35), inset 0 1px 0 rgba(255,255,255,.3); transition:transform .18s,box-shadow .18s; flex:none; }
 #startBtn:hover{ transform:scale(1.07) rotate(-4deg); box-shadow:0 6px 22px var(--acc-35); }
@@ -176,7 +182,7 @@ body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) both;
 .dialog p{ font-size:13px; color:var(--dim); line-height:1.55; }
 .dialog input{ width:100%; margin-top:12px; height:40px; padding:0 13px; border-radius:11px; background:var(--surface2); border:1px solid var(--border2); outline:0; font-size:13.5px; }
 .dialog input:focus{ border-color:var(--acc); box-shadow:0 0 0 3px var(--acc-12); }
-.dlg-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+.dlg-actions{ display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:18px; }
 
 /* экраны загрузки / блокировки / выключения */
 .fullscreen{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
@@ -219,8 +225,9 @@ body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) both;
   .sm-grid{ grid-template-columns:repeat(4,1fr); }
   #popover{ right:6px; }
   #toasts{ left:6px; right:6px; top:8px; width:auto; }
-  #desktopIcons{ flex-direction:row; max-height:none; max-width:calc(100vw - 20px); }
-  .dicon{ width:76px; } .dicon .tile{ width:46px; height:46px; }
+  #desktopIcons{ height:auto; width:calc(100% - 20px); grid-auto-flow:row; grid-template-rows:none; grid-template-columns:repeat(auto-fill,76px); grid-auto-columns:auto; }
+  .dicon{ width:76px; height:96px; }
+  .dicon .tile{ flex-basis:46px; width:46px; height:46px; min-width:46px; min-height:46px; }
   #lockTime{ font-size:56px; }
   #trayMusic .tm-name{ display:none; }
   .tray-btn{ padding:0 7px; }

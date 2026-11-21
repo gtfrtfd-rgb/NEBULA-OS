@@ -19,6 +19,7 @@ const DESKTOP_APPS=['explorer','terminal','editor','paint','game','music','help'
 let popState=null,calOffset=0,smKbd=-1,tickN=0;
 let wifi={on:true,net:'Nebula-5G',connecting:null};
 let battery={level:.86,charging:false,real:false};
+let lastTap={app:null,t:0};
 
 export function startOpen(){return $('#startMenu').classList.contains('open');}
 function syncUser(){$('#smName').textContent=settings.username;$('#lockName').textContent=settings.username;}
@@ -33,8 +34,21 @@ function renderDock(){
   box.innerHTML=html;
 }
 function renderDesktop(){
-  const box=$('#desktopIcons');
-  box.innerHTML=DESKTOP_APPS.map((a,i)=>`<button class="dicon" data-app="${a}" style="--i:${i}">${tileHtml(Apps[a],54)}<span>${Apps[a].name}</span></button>`).join('');
+  $('#desktopIcons').innerHTML=DESKTOP_APPS.map((a,i)=>
+    `<button class="dicon" data-app="${a}" title="${Apps[a].name} — двойной клик" style="--i:${i}">${tileHtml(Apps[a],54)}<span>${Apps[a].name}</span></button>`).join('');
+}
+function launchFromIcon(btn,app){
+  const t=$('.tile',btn);
+  if(t){t.classList.remove('launching');void t.offsetWidth;t.classList.add('launching');setTimeout(()=>t.classList.remove('launching'),460);}
+  WM.open(app);
+}
+function activateIcon(btn,viaKeyboard){
+  const app=btn.dataset.app;if(!Apps[app])return;
+  $$('.dicon').forEach(x=>x.classList.toggle('sel',x===btn));
+  const now=performance.now();
+  const doubled=lastTap.app===app&&now-lastTap.t<500;
+  lastTap={app,t:now};
+  if(viaKeyboard||isCoarse||doubled){lastTap={app:null,t:0};launchFromIcon(btn,app);}
 }
 function refreshDesktopAnim(){document.body.classList.remove('entered');void document.body.offsetWidth;document.body.classList.add('entered');Audio.sfx('tick');}
 function syncSoundUI(){
@@ -55,7 +69,7 @@ function toggleSound(){setSetting('sound',!settings.sound);Audio.init();Audio.re
 
 function openStart(focus=false){
   closePopover();closeContext();
-  const m=$('#startMenu');m.classList.add('open');$('#startBtn').classList.add('on');
+  $('#startMenu').classList.add('open');$('#startBtn').classList.add('on');
   $('#smSearch').value='';renderStart('');smKbd=-1;
   if(focus)setTimeout(()=>$('#smSearch').focus(),120);
 }
@@ -174,16 +188,28 @@ export function initShell(){
   if(navigator.getBattery){navigator.getBattery().then(b=>{battery.real=true;
     const upd=()=>{battery.level=b.level;battery.charging=b.charging;syncQuickIcon();if(popState==='quick')renderPopover();};
     upd();b.addEventListener('levelchange',upd);b.addEventListener('chargingchange',upd);}).catch(()=>{});}
+
+  /* иконки рабочего стола: клик — выбор, двойной клик / Enter / тап — запуск */
   $('#desktopIcons').addEventListener('click',e=>{
     const b=e.target.closest('.dicon');if(!b)return;
-    $$('.dicon').forEach(x=>x.classList.toggle('sel',x===b));
-    if((isCoarse&&e.detail===1)||e.detail===0)WM.open(b.dataset.app);});
-  $('#desktopIcons').addEventListener('dblclick',e=>{const b=e.target.closest('.dicon');if(b)WM.open(b.dataset.app);});
-  $('#desktop').addEventListener('pointerdown',e=>{if(!e.target.closest('.dicon,.wchip'))$$('.dicon').forEach(x=>x.classList.remove('sel'));});
+    activateIcon(b,e.detail===0);});
+  $('#desktopIcons').addEventListener('keydown',e=>{
+    const b=e.target.closest('.dicon');if(!b)return;
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();lastTap={app:null,t:0};launchFromIcon(b,b.dataset.app);}});
+  $('#desktop').addEventListener('pointerdown',e=>{
+    if(!e.target.closest('.dicon,.wchip')){$$('.dicon').forEach(x=>x.classList.remove('sel'));lastTap={app:null,t:0};}});
   $('#desktop').addEventListener('contextmenu',e=>{
     if(e.target.closest('.wchip'))return;
+    const onIcon=e.target.closest('.dicon');
+    if(onIcon){
+      const a=onIcon.dataset.app;
+      openContext(e.clientX,e.clientY,[
+        {icon:Apps[a].icon,label:'Открыть '+Apps[a].name,fn:()=>launchFromIcon(onIcon,a)},
+        {icon:'square',label:'Открыть развёрнутым',fn:()=>{const w=WM.open(a);if(w&&!isMobileNow())WM.setState(w,'max');}},'sep',
+        {icon:'restart',label:'Обновить рабочий стол',fn:refreshDesktopAnim}]);
+      return;}
     openContext(e.clientX,e.clientY,[
-      {icon:'fileplus',label:'Новая заметка',fn:()=>{const n=addNode('/Документы',mkText('заметка.txt',''));if(n){WM.open('editor',{id:n.id});notify('success','Заметка создана','Файл лежит в /Документы.');}}},
+      {icon:'fileplus',label:'Новая заметка',fn:()=>WM.open('editor')},
       {icon:'image',label:'Сменить обои',fn:()=>{const keys=Object.keys(WALL_NAMES);const next=keys[(keys.indexOf(settings.wallpaper)+1)%keys.length];setSetting('wallpaper',next);notify('info','Обои',`Теперь: ${WALL_NAMES[next]}.`);}},
       {icon:'restart',label:'Обновить',fn:refreshDesktopAnim},'sep',
       {icon:'terminal',label:'Открыть терминал',kbd:'Ctrl+Alt+T',fn:()=>WM.open('terminal')},
@@ -191,6 +217,7 @@ export function initShell(){
       {icon:'sliders',label:'Параметры экрана',fn:()=>WM.open('settings',{section:'look'})},'sep',
       {icon:'help',label:'О системе',fn:()=>WM.open('help')}]);});
   $('#wSound').addEventListener('click',toggleSound);
+
   $('#startBtn').addEventListener('click',()=>startOpen()?closeStart():openStart(true));
   $('#searchPill').addEventListener('click',()=>openStart(true));
   $('#dockApps').addEventListener('click',e=>{
@@ -224,6 +251,7 @@ export function initShell(){
   $('#tmPlay').addEventListener('click',()=>Music.toggle());
   $('#tmStop').addEventListener('click',()=>Music.stop());
   Music.sub(syncTrayMusic);
+
   $('#smSearch').addEventListener('input',e=>{renderStart(e.target.value);smKbd=-1;});
   $('#smSearch').addEventListener('keydown',e=>{
     const items=smItems();
@@ -245,6 +273,7 @@ export function initShell(){
   $('#lockShutdown').addEventListener('click',()=>powerAction('shutdown'));
   $('#powerOn').addEventListener('click',()=>{Audio.init();Audio.resume();bootSequence();});
   $('#bootSkip').addEventListener('click',showLock);
+
   document.addEventListener('pointerdown',e=>{
     if(!e.target.closest('#contextMenu'))closeContext();
     if(!e.target.closest('#popover,[data-pop]'))closePopover();
@@ -270,7 +299,7 @@ export function initShell(){
       if(map[e.code]){e.preventDefault();WM.open(map[e.code]);return;}
       if(e.code==='KeyL'){e.preventDefault();lockScreen();return;}
       const dir={ArrowLeft:[-24,0],ArrowRight:[24,0],ArrowUp:[0,-24],ArrowDown:[0,24]}[e.code];
-      if(dir){const w=WM.focused();if(w&&w.state==='normal'&&!isMobile()){e.preventDefault();
+      if(dir){const w=WM.focused();if(w&&w.state==='normal'&&!isMobileNow()){e.preventDefault();
         if(e.shiftKey){w.w=clamp(w.w+dir[0],Apps[w.app].minW||300,innerWidth-w.x-4);w.h=clamp(w.h+dir[1],Apps[w.app].minH||220,WM.workH()-w.y-2);}
         else{w.x=clamp(w.x+dir[0],-w.w+90,innerWidth-90);w.y=clamp(w.y+dir[1],0,WM.workH()-40);}
         WM.applyRect(w);w.prev={x:w.x,y:w.y,w:w.w,h:w.h};w.api?.onResize?.();}return;}
@@ -284,3 +313,4 @@ export function initShell(){
   bus.on('vfs',()=>{if(startOpen()&&!$('#smSearch').value)renderStart('');});
   bus.on('notifications',()=>{if(popState==='notif')renderPopover();});
 }
+function isMobileNow(){return innerWidth<=720;}

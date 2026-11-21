@@ -13,6 +13,8 @@ open(appId,params={}){
     if(ex){if(ex.minimized)this.restore(ex);this.focus(ex);if(params&&Object.keys(params).length&&ex.api?.remount)ex.api.remount(params);return ex;}}
   if(app.perFile&&params.id){const ex=[...this.wins.values()].find(w=>w.app===appId&&w.api?.fileId===params.id&&!w.closing);
     if(ex){if(ex.minimized)this.restore(ex);this.focus(ex);return ex;}}
+  if(app.findExisting){const ex=app.findExisting(params,[...this.wins.values()].filter(w=>w.app===appId&&!w.closing));
+    if(ex){if(ex.minimized)this.restore(ex);this.focus(ex);return ex;}}
   const id=uid();
   const vw=innerWidth,vh=this.workH();
   let w=Math.min(app.w,vw-20),h=Math.min(app.h,vh-16);
@@ -139,7 +141,20 @@ restore(win){if(!win.minimized)return;clearTimeout(win.timers.min);
   requestAnimationFrame(()=>win.el.classList.remove('min-pose'));
   clearTimeout(win.timers.min);win.timers.min=setTimeout(()=>win.el.classList.remove('min-anim'),250);
   this.focus(win);bus.emit('wins');},
-close(win,instant=false){if(win.closing)return;win.closing=true;
+close(win,instant=false){
+  if(win.closing)return;
+  if(!instant&&!win._closeOk&&typeof win.api?.beforeClose==='function'){
+    if(win._asking)return;
+    win._asking=true;this.focus(win);
+    let r;try{r=win.api.beforeClose();}catch(e){r=true;}
+    Promise.resolve(r).then(allow=>{
+      win._asking=false;
+      if(allow===false)return;
+      win._closeOk=true;this.close(win,instant);
+    },()=>{win._asking=false;win._closeOk=true;this.close(win,instant);});
+    return;
+  }
+  win.closing=true;
   try{win.api?.onClose?.();}catch(e){console.warn(e);}
   Object.values(win.timers).forEach(clearTimeout);
   if(!instant)Audio.sfx('close');
