@@ -1,0 +1,55 @@
+/* NEBULA OS — полоса обновления и метка сборки */
+#updateBar{
+  position:fixed; top:calc(14px + var(--sa-t)); left:50%;
+  transform:translate(-50%,-26px);
+  z-index:9950; display:flex; align-items:center; gap:12px;
+  padding:10px 11px 10px 15px;
+  max-width:min(470px, calc(100vw - 24px - var(--sa-l) - var(--sa-r)));
+  background:var(--surface);
+  backdrop-filter:blur(24px) saturate(1.6); -webkit-backdrop-filter:blur(24px) saturate(1.6);
+  border:1px solid var(--acc-35); border-radius:16px;
+  box-shadow:0 18px 50px rgba(0,0,0,.5), 0 0 0 1px var(--acc-12), 0 0 44px var(--acc-20);
+  opacity:0; visibility:hidden;
+  transition:opacity .26s ease, transform .3s cubic-bezier(.2,.9,.3,1.2), visibility .26s;
+}
+#updateBar.on{ opacity:1; visibility:visible; transform:translate(-50%,0); }
+#updateBar .upd-ico{
+  flex:none; width:34px; height:34px; border-radius:11px; font-size:18px;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--acc-20),rgba(34,211,238,.16));
+  box-shadow:inset 0 0 0 1px var(--acc-20);
+  animation:updFloat 2.6s ease-in-out infinite;
+}
+@keyframes updFloat{ 50%{ transform:translateY(-3px) rotate(-6deg); } }
+#updateBar .upd-txt{ flex:1; min-width:0; }
+#updateBar .upd-txt b{ display:block; font-size:12.5px; font-weight:800; color:var(--text); }
+#updateBar .upd-txt span{
+  display:block; font-family:var(--f-m); font-size:10.5px; color:var(--acc-text);
+  margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#updateBar .upd-actions{ display:flex; gap:6px; flex:none; }
+
+.sm-build{
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  margin-top:10px; font-family:var(--f-m); font-size:10.5px; font-weight:500;
+  color:var(--faint); letter-spacing:.2px;
+}
+.sm-build i{
+  width:6px; height:6px; border-radius:50%; flex:none;
+  background:var(--green); box-shadow:0 0 8px var(--green);
+}
+
+@media (max-width:1188px){
+  html.has-update #toasts{ top:calc(14px + var(--sa-t) + 66px); }
+}
+@media (max-width:720px){
+  #updateBar{
+    left:calc(6px + var(--sa-l)); right:calc(6px + var(--sa-r));
+    max-width:none; transform:translateY(-26px); flex-wrap:wrap; gap:10px;
+    padding:11px 12px;
+  }
+  #updateBar.on{ transform:none; }
+  #updateBar .upd-actions{ width:100%; }
+  #updateBar .upd-actions .btn{ flex:1; }
+  html.has-update #toasts{ top:calc(8px + var(--sa-t) + 104px); }
+}

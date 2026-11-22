@@ -48,6 +48,14 @@ jobs:
         run: |
           node -e "const m=JSON.parse(require('node:fs').readFileSync('manifest.webmanifest','utf8'));if(!m.name||!m.start_url||!m.icons?.length)throw new Error('manifest неполный');console.log('manifest OK:',m.name)"
 
+      - name: Версии в version.js и sw.js должны совпадать
+        run: |
+          set -euo pipefail
+          V=$(grep -oP "export const VERSION='\K[^']+" js/core/version.js)
+          S=$(grep -oP "const VERSION = '\K[^']+" sw.js)
+          echo "version.js=$V  sw.js=$S"
+          [ "$V" = "$S" ] || { echo "::error::VERSION в sw.js не совпадает с version.js"; exit 1; }
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
@@ -62,14 +70,22 @@ jobs:
           SHORT="${GITHUB_SHA::7}"
           STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          # версия кэша service worker = коммит, иначе браузер держит старую сборку
           sed -i "s/__BUILD_ID__/${SHORT}/g" _site/sw.js
-          # метка сборки для отладки на живом сайте
           sed -i "s|</head>|<meta name=\"nebula-build\" content=\"${SHORT} · ${STAMP}\"></head>|" _site/index.html
 
           find _site -name '*.map' -delete
           echo "Собрано файлов: $(find _site -type f | wc -l)"
           du -sh _site
+
+      - name: Штампы сборки проставлены
+        run: |
+          set -euo pipefail
+          if grep -q '__BUILD_ID__' _site/sw.js; then
+            echo "::error::в sw.js остался placeholder __BUILD_ID__"; exit 1
+          fi
+          grep -q 'name="nebula-build"' _site/index.html || { echo "::error::в index.html нет метки сборки"; exit 1; }
+          echo "sw.js:  $(grep -m1 'const BUILD_ID' _site/sw.js)"
+          echo "html:   $(grep -o '<meta name="nebula-build"[^>]*>' _site/index.html)"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -96,5 +112,5 @@ jobs:
             echo ""
             echo "- Адрес: ${{ steps.deployment.outputs.page_url }}"
             echo "- Коммит: \`${GITHUB_SHA::7}\`"
-            echo "- Сборка: 1.0.1 «Пульсар»"
+            echo "- Кэш воркера: \`nebula-app-1.0.1-${GITHUB_SHA::7}\`"
           } >> "$GITHUB_STEP_SUMMARY"
