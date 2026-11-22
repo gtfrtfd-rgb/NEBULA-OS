@@ -1,5 +1,6 @@
 import {$,esc,clamp,hexRgb,fmtUp} from '../core/utils.js';
 import {icon} from '../core/icons.js';
+import {bus} from '../core/bus.js';
 import {WM} from '../wm.js';
 import {Music} from '../core/music.js';
 import {Wall} from '../core/wallpaper.js';
@@ -17,25 +18,37 @@ mount(body,win){
     <div class="mon-list"></div></div>`;
   const spark=$('.mon-spark',body),sx=spark.getContext('2d');
   const cpuHist=Array(60).fill(4);const proc=new Map();
-  function stats(id,app){if(!proc.has(id))proc.set(id,{cpu:2+Math.random()*5,ram:{explorer:120,terminal:64,editor:88,calc:42,paint:210,music:150,game:96,monitor:74,settings:66,viewer:130,help:52}[app]||80});
+  let acc=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#7c6bff';
+  let accRgb=hexRgb(acc),sparkW=0,sparkH=0;
+  const offSet=bus.on('settings',()=>{acc=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#7c6bff';accRgb=hexRgb(acc);});
+
+  function stats(id,app){
+    if(!proc.has(id))proc.set(id,{cpu:2+Math.random()*5,ram:{explorer:120,terminal:64,editor:88,calc:42,paint:210,music:150,game:96,monitor:74,settings:66,viewer:130,help:52}[app]||80});
     const p=proc.get(id);
     let target=3+Math.random()*6;
     if(app==='music'&&Music.playing)target=11+Math.random()*6;
     if(app==='paint')target=4+Math.random()*10;
     if(app==='game')target=2+Math.random()*5;
     p.cpu=clamp(p.cpu+(target-p.cpu)*.3+(Math.random()-.5)*2,.3,32);
-    p.ram=Math.max(30,p.ram+(Math.random()-.5)*4);return p;}
+    p.ram=Math.max(30,p.ram+(Math.random()-.5)*4);
+    return p;
+  }
   function draw(){
-    const d=Math.min(devicePixelRatio||1,1.5),r=spark.getBoundingClientRect();
-    spark.width=r.width*d;spark.height=40*d;sx.setTransform(d,0,0,d,0,0);
-    const w=r.width,h=40;sx.clearRect(0,0,w,h);
-    const c1=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim();
-    sx.beginPath();cpuHist.forEach((v,i)=>{const x=i/(cpuHist.length-1)*w,y=h-2-(v/40)*(h-6);i===0?sx.moveTo(x,y):sx.lineTo(x,y);});
-    sx.strokeStyle=c1;sx.lineWidth=1.8;sx.stroke();
+    const r=spark.getBoundingClientRect();
+    const d=Math.min(devicePixelRatio||1,1.5),w=Math.round(r.width),h=40;
+    if(!w)return;
+    if(w!==sparkW||h!==sparkH){spark.width=w*d;spark.height=h*d;sx.setTransform(d,0,0,d,0,0);sparkW=w;sparkH=h;}
+    sx.clearRect(0,0,w,h);
+    sx.beginPath();
+    for(let i=0;i<cpuHist.length;i++){const x=i/(cpuHist.length-1)*w,y=h-2-(cpuHist[i]/40)*(h-6);i===0?sx.moveTo(x,y):sx.lineTo(x,y);}
+    sx.strokeStyle=acc;sx.lineWidth=1.8;sx.stroke();
     sx.lineTo(w,h);sx.lineTo(0,h);sx.closePath();
-    const g=sx.createLinearGradient(0,0,0,h);const[r1,g1,b1]=hexRgb(c1);
-    g.addColorStop(0,`rgba(${r1},${g1},${b1},.3)`);g.addColorStop(1,'rgba(0,0,0,0)');sx.fillStyle=g;sx.fill();}
+    const g=sx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,`rgba(${accRgb[0]},${accRgb[1]},${accRgb[2]},.3)`);g.addColorStop(1,'rgba(0,0,0,0)');
+    sx.fillStyle=g;sx.fill();
+  }
   function tick(){
+    if(win.minimized||win.closing||document.hidden)return;
     const rows=[];let total=6+Math.random()*3,ram=1240;
     const sysCpu=clamp(100/Math.max(30,Wall.fps)*4+Math.random()*2,2,14);
     total+=sysCpu;ram+=96;
@@ -55,19 +68,22 @@ mount(body,win){
     rows.sort((a,b)=>(a.sys?1:0)-(b.sys?1:0)||b.cpu-a.cpu);
     $('.mon-list',body).innerHTML=rows.map(r=>{
       const col=r.cpu>18?'var(--red)':r.cpu>9?'var(--amber)':'var(--green)';
+      const g0=r.g?r.g[0]:Apps[r.app].g[0],g1=r.g?r.g[1]:Apps[r.app].g[1];
       return`<div class="mon-row" data-id="${r.id||''}">
-        <span class="tile" style="background:linear-gradient(135deg,${r.g?r.g[0]:Apps[r.app].g[0]},${r.g?r.g[1]:Apps[r.app].g[1]})">${icon(r.icon||Apps[r.app].icon,15)}</span>
+        <span class="tile" style="background:linear-gradient(135deg,${g0},${g1})">${icon(r.icon||Apps[r.app].icon,15)}</span>
         <div class="mr-n"><b>${esc(r.name)}</b><span>${esc(r.sub)}</span></div>
         <div class="mr-cpu"><div class="v" style="color:${col}">${r.cpu.toFixed(1)}%</div><div class="cpu-bar"><i style="width:${clamp(r.cpu*3,3,100)}%;background:${col}"></i></div></div>
         <div class="mr-ram">${Math.round(r.ram)} МБ</div>
         ${r.sys?`<button class="ibtn" disabled title="Системный процесс">${icon('lock',13)}</button>`:`<button class="ibtn mon-kill" data-id="${r.id}" title="Снять задачу">${icon('x',14)}</button>`}
       </div>`;}).join('');
-    draw();}
+    draw();
+  }
   $('.mon-list',body).addEventListener('click',e=>{
     const kill=e.target.closest('.mon-kill');
     if(kill){const w=WM.wins.get(kill.dataset.id);if(w)WM.close(w);return;}
     const row=e.target.closest('.mon-row');
     if(row&&row.dataset.id){const w=WM.wins.get(row.dataset.id);if(w){if(w.minimized)WM.restore(w);WM.focus(w);}}});
-  tick();const iv=setInterval(tick,1000);
-  return{onClose(){clearInterval(iv);},onResize:draw};
+  tick();
+  const iv=setInterval(tick,1000);
+  return{onClose(){clearInterval(iv);offSet();},onResize(){sparkW=0;draw();}};
 }};

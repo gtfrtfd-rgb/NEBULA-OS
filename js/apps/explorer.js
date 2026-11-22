@@ -7,12 +7,16 @@ import {openContext} from '../core/context.js';
 import {openFileNode} from '../core/launch.js';
 import {normPath,parentPath,baseName,nodeAt,nodeSize,addNode,removeNode,restoreNode,renameNode,findPathById,recentFiles,mkDir,mkText} from '../core/vfs.js';
 
+/* кэш уменьшенных превью: большие PNG не декодируются на каждый рендер */
+const thumbCache=new Map();
+const thumbPending=new Set();
+
 export default {name:'Файлы',icon:'folder',g:['#ffb454','#ff6a3d'],w:780,h:520,minW:420,minH:300,
 mount(body,win,params){
   let path=params.path&&nodeAt(params.path)?params.path:'/';
   let view=settings.explorerView,sort=settings.explorerSort,asc=settings.explorerAsc,query='',recent=path==='@recent';
   if(recent)path='/';
-  let sel=new Set();
+  let sel=new Set(),pending=false,vfsTimer=null;
   body.innerHTML=`
   <div class="toolbar">
     <button class="ibtn nav-up" title="Вверх">${icon('up',16)}</button>
@@ -35,6 +39,30 @@ mount(body,win,params){
   const items=$('.exp-items',body),crumbs=$('.crumbs',body),side=$('.exp-side',body);
   $('.sort-sel',body).value=sort;
   const NAV=[['/','home','Обзор'],['/Документы','file','Документы'],['/Изображения','image','Изображения'],['/Музыка','music','Музыка'],['/Система','hdd','Система'],['@recent','clock','Недавние']];
+
+  function thumbSrc(n){
+    const key=n.id+':'+n.mtime;
+    if(thumbCache.has(key))return thumbCache.get(key);
+    if(!thumbPending.has(key)){
+      thumbPending.add(key);
+      const im=new Image();
+      im.onload=()=>{
+        thumbPending.delete(key);
+        try{
+          const tw=128,th=Math.max(1,Math.round(im.height/im.width*tw));
+          const c=document.createElement('canvas');c.width=tw;c.height=th;
+          c.getContext('2d').drawImage(im,0,0,tw,th);
+          const url=c.toDataURL('image/png');
+          if(thumbCache.size>80)thumbCache.delete(thumbCache.keys().next().value);
+          thumbCache.set(key,url);
+          $$(`img[data-thumb="${key}"]`,items).forEach(el2=>{el2.src=url;});
+        }catch(e){}
+      };
+      im.onerror=()=>thumbPending.delete(key);
+      im.src=n.content;
+    }
+    return n.content;
+  }
   function renderSide(){side.innerHTML=NAV.map(([p,i,n])=>`<button class="exp-nav ${(recent?p==='@recent':(!recent&&path===p))?'on':''}" data-p="${esc(p)}">${icon(i,15)}<span>${n}</span></button>`).join('');}
   side.addEventListener('click',e=>{const b=e.target.closest('.exp-nav');if(!b)return;const p=b.dataset.p;
     if(p==='@recent'){recent=true;}else{recent=false;path=nodeAt(p)?p:'/';}sel.clear();render();});
@@ -49,9 +77,11 @@ mount(body,win,params){
     return list;}
   function fileIcon(n){
     if(n.type==='dir')return`<span class="fi" style="background:linear-gradient(135deg,#ffb454,#ff6a3d)">${icon('folder',22)}</span>`;
-    if(n.type==='image')return`<span class="fi thumb"><img src="${n.content}" alt="${esc(n.name)}" loading="lazy"></span>`;
+    if(n.type==='image'){const key=n.id+':'+n.mtime;
+      return`<span class="fi thumb"><img data-thumb="${key}" src="${thumbSrc(n)}" alt="${esc(n.name)}" loading="lazy" decoding="async"></span>`;}
     return`<span class="fi" style="background:linear-gradient(135deg,#4f8dff,#7c6bff)">${icon('file',20)}</span>`;}
   function render(){
+    pending=false;
     renderSide();
     crumbs.innerHTML='';
     if(recent){crumbs.appendChild(el(`<button class="crumb">${icon('clock',12)} Недавние</button>`));}
@@ -66,12 +96,14 @@ mount(body,win,params){
     const list=currentItems();
     items.innerHTML='';
     if(!list.length){items.appendChild(el(`<div class="exp-empty"><span class="big">${query?'🔭':'🌌'}</span><b>${query?'Ничего не найдено':'Здесь пока пусто'}</b><span>${query?'Попробуйте другой запрос — туманность большая.':'Создайте папку или файл кнопками на панели сверху. Или через терминал: touch идея.txt'}</span></div>`));}
+    const frag=document.createDocumentFragment();
     list.forEach(n=>{
-      const it=el(`<div class="fitem ${sel.has(n.id)?'sel':''}" data-id="${n.id}" tabindex="0">
+      frag.appendChild(el(`<div class="fitem ${sel.has(n.id)?'sel':''}" data-id="${n.id}" tabindex="0">
         ${fileIcon(n)}<span class="fname">${esc(n.name)}</span>
-        ${view==='list'?`<span class="fmeta">${n.type==='dir'?n.children.length+' эл.':fmtBytes(nodeSize(n))} · ${relTime(n.mtime)}</span>`:''}</div>`);
-      items.appendChild(it);});
-    $('.st-count',body).textContent=`${list.length} объект${list.length%10===1&&list.length%100!==11?'':list.length%10>=2&&list.length%10<=4&&(list.length%100<10||list.length%100>=20)?'а':'ов'}`;
+        ${view==='list'?`<span class="fmeta">${n.type==='dir'?n.children.length+' эл.':fmtBytes(nodeSize(n))} · ${relTime(n.mtime)}</span>`:''}</div>`));});
+    items.appendChild(frag);
+    const cnt=list.length;
+    $('.st-count',body).textContent=`${cnt} объект${cnt%10===1&&cnt%100!==11?'':cnt%10>=2&&cnt%10<=4&&(cnt%100<10||cnt%100>=20)?'а':'ов'}`;
     $('.st-sel',body).textContent=sel.size?`выбрано: ${sel.size}`:'';
     $('.ren',body).disabled=sel.size!==1;$('.del',body).disabled=sel.size===0;
     win.setTitle(recent?'Файлы — Недавние':(path==='/'?'Файлы':'Файлы — '+baseName(path)));
@@ -137,7 +169,21 @@ mount(body,win,params){
     else if(e.key==='F2'&&sel.size===1){e.preventDefault();$('.ren',body).click();}
     else if(e.key==='Enter'&&sel.size===1){e.preventDefault();const n=currentItems().find(x=>sel.has(x.id));if(n)openNode(n);}
     else if(e.key==='Backspace'){e.preventDefault();$('.nav-up',body).click();}};
-  const off=bus.on('vfs',()=>{if(!recent&&!nodeAt(path))path='/';sel=new Set([...sel].filter(id=>findPathById(id)));render();});
+
+  /* события ФС приходят пачками — сворачиваем их в один рендер */
+  const offVfs=bus.on('vfs',()=>{
+    if(win.minimized){pending=true;return;}
+    clearTimeout(vfsTimer);
+    vfsTimer=setTimeout(()=>{
+      if(win.closing)return;
+      if(win.minimized){pending=true;return;}
+      if(!recent&&!nodeAt(path))path='/';
+      sel=new Set([...sel].filter(id=>findPathById(id)));
+      render();
+    },70);
+  });
+  const offWins=bus.on('wins',()=>{if(pending&&!win.minimized&&!win.closing){pending=false;render();}});
   render();
-  return{onClose:off,remount(p){if(p.path){recent=false;path=nodeAt(p.path)?p.path:'/';sel.clear();render();}}};
+  return{onClose(){offVfs();offWins();clearTimeout(vfsTimer);},
+    remount(p){if(p.path){recent=false;path=nodeAt(p.path)?p.path:'/';sel.clear();render();}}};
 }};

@@ -10,10 +10,11 @@ import {confirmDlg} from '../core/dialogs.js';
 import {storageInfo,requestPersist,wipeVfs} from '../core/vfs.js';
 import {paintScene,Wall} from '../core/wallpaper.js';
 import {WM} from '../wm.js';
+import {BUILD_LINE,KERNEL} from '../core/version.js';
 
 export default {name:'Настройки',icon:'sliders',g:['#8a93c9','#4a5382'],w:730,h:560,minW:480,minH:400,single:true,
 mount(body,win,params){
-  let section=params.section||'look';
+  let section=params.section||'look',stTimer=null;
   body.innerHTML=`<div class="set"><div class="set-nav"></div><div class="set-body"></div></div>`;
   const nav=$('.set-nav',body),sb=$('.set-body',body);
   const SECTIONS=[['look','brush','Оформление'],['sound','vol','Звук'],['system','cpu','Система'],['about','info','О системе']];
@@ -36,8 +37,9 @@ mount(body,win,params){
     pb.innerHTML=s.persisted?icon('check',13)+' Хранилище постоянно':icon('lock',13)+' Сделать постоянным';
   }
   function refreshStorage(){
-    storageInfo().then(s=>{if(sb.isConnected)paintStorage(s);}).catch(()=>{});
+    storageInfo().then(s=>{if(sb.isConnected&&!win.closing)paintStorage(s);}).catch(()=>{});
   }
+  function queueStorage(){clearTimeout(stTimer);stTimer=setTimeout(()=>{if(!win.closing&&!win.minimized)refreshStorage();},400);}
 
   function render(){renderNav();
     if(section==='look'){
@@ -81,7 +83,7 @@ mount(body,win,params){
       sb.innerHTML=`<div class="set-h">Система</div><div class="set-sub">Ресурсы, качество и обслуживание.</div>
       <div class="set-row"><div class="sr-t"><b>Имя пользователя</b><span>Отображается на экране входа и в терминале</span></div>
         <input class="inp user-inp" value="${esc(settings.username)}" maxlength="24" style="width:170px"></div>
-      <div class="set-row"><div class="sr-t"><b>Качество рендера</b><span>Экономный режим отключает стекло и снижает разрешение обоев</span></div>
+      <div class="set-row"><div class="sr-t"><b>Качество рендера</b><span>Экономный режим: 30 FPS, меньше звёзд, без стекла</span></div>
         <select class="sel q-sel"><option value="high">Высокое</option><option value="med">Среднее</option><option value="eco">Экономное</option></select></div>
       <div class="mon-card" style="margin:14px 0">
         <div class="mc-l"><span>Хранилище nebulaFS</span><span class="st-mode">…</span></div>
@@ -115,9 +117,9 @@ mount(body,win,params){
     }
     else{
       sb.innerHTML=`<div class="set-h">О системе</div><div class="set-sub">Паспорт космического аппарата.</div>
-      <div class="about-logo">${tileHtml({icon:'logo',g:['#7c6bff','#22d3ee']},58)}<div><b>NEBULA OS</b><span>Версия 1.0 «Пульсар» · сборка 2026.11.21</span></div></div>
+      <div class="about-logo">${tileHtml({icon:'logo',g:['#7c6bff','#22d3ee']},58)}<div><b>NEBULA OS</b><span>${BUILD_LINE}</span></div></div>
       <dl class="about-grid">
-        <dt>Ядро</dt><dd>6.2.0-nebula</dd>
+        <dt>Ядро</dt><dd>${KERNEL}</dd>
         <dt>Оболочка</dt><dd>NebulaShell 1.0</dd>
         <dt>Движок</dt><dd>Vanilla JS · Canvas 2D · Web Audio</dd>
         <dt>Файловая система</dt><dd>nebulaFS (IndexedDB)</dd>
@@ -133,7 +135,7 @@ mount(body,win,params){
     if(k==='volume'){const r=$('.vol-range',sb);if(r){r.value=settings.volume;r.style.setProperty('--val',r.value+'%');$('.vol-label',sb)?.replaceChildren(settings.volume+'%');}}
     if(k==='sound'){const t=$('[data-set="sound"]',sb);if(t)t.checked=settings.sound;}
     if(k==='musicVol'){const r=$('.mvol-range',sb);if(r){r.value=settings.musicVol;r.style.setProperty('--val',r.value+'%');}}});
-  const offVfs=bus.on('vfs',()=>{if(section==='system')refreshStorage();});
+  const offVfs=bus.on('vfs',()=>{if(section==='system')queueStorage();});
   render();
-  return{onClose(){off();offVfs();},remount(p){if(p.section){section=p.section;render();}}};
+  return{onClose(){off();offVfs();clearTimeout(stTimer);},remount(p){if(p.section){section=p.section;render();}}};
 }};

@@ -1,5 +1,6 @@
 import {$,fmtSec} from '../core/utils.js';
 import {icon} from '../core/icons.js';
+import {bus} from '../core/bus.js';
 import {Music} from '../core/music.js';
 import {Audio} from '../core/audio.js';
 import {settings,setSetting} from '../core/settings.js';
@@ -18,7 +19,13 @@ mount(body,win){
       </div>
       <div class="m-vol">${icon('vol',16)}<input type="range" class="mv-range" min="0" max="100" value="${settings.musicVol}"><span class="mv-v">${settings.musicVol}%</span></div>
     </div></div>`;
-  const cv=$('canvas',body),cx=cv.getContext('2d');let raf=0,frame=0,t=0;
+  const cv=$('canvas',body),cx=cv.getContext('2d');
+  let raf=0,frame=0,t=0,vw=0,vh=0,freq=null;
+  let c1='#7c6bff',c2='#ff4fa3';
+  function readColors(){const s=getComputedStyle(document.documentElement);c1=s.getPropertyValue('--acc').trim()||c1;c2=s.getPropertyValue('--acc-b').trim()||c2;}
+  readColors();
+  const offSet=bus.on('settings',readColors);
+
   function sync(){
     const p=Music.presets[Music.preset];
     $('.mt-name',body).textContent=p.name;$('.mt-desc',body).textContent=p.desc+' · '+p.bpm+' BPM';
@@ -33,28 +40,40 @@ mount(body,win){
   const rng=$('.mv-range',body);
   const updR=()=>{rng.style.setProperty('--val',rng.value+'%');$('.mv-v',body).textContent=rng.value+'%';};
   rng.addEventListener('input',()=>{setSetting('musicVol',+rng.value);Audio.setMusicVol(+rng.value);updR();});updR();
-  function resize(){const r=cv.parentElement.getBoundingClientRect();const d=Math.min(devicePixelRatio||1,1.6);cv.width=r.width*d;cv.height=r.height*d;cx.setTransform(d,0,0,d,0,0);}
+
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    const d=Math.min(devicePixelRatio||1,1.5);
+    vw=Math.max(1,Math.round(r.width));vh=Math.max(1,Math.round(r.height));
+    cv.width=vw*d;cv.height=vh*d;cx.setTransform(d,0,0,d,0,0);
+  }
   resize();
+
   function draw(){
-    raf=requestAnimationFrame(draw);t+=.016;frame++;
-    const w=cv.width/Math.min(devicePixelRatio||1,1.6),h=cv.height/Math.min(devicePixelRatio||1,1.6);
-    cx.clearRect(0,0,w,h);
-    const style=getComputedStyle(document.documentElement);
-    const c1=style.getPropertyValue('--acc').trim(),c2=style.getPropertyValue('--acc-b').trim();
+    raf=requestAnimationFrame(draw);
+    if(win.minimized||win.closing||document.hidden)return;
+    t+=.016;frame++;
+    cx.clearRect(0,0,vw,vh);
     if(Music.playing&&Audio.analyser){
-      const arr=new Uint8Array(Audio.analyser.frequencyBinCount);Audio.analyser.getByteFrequencyData(arr);
-      const N=44,bw=w/N;
-      for(let i=0;i<N;i++){const v=arr[Math.floor(i*arr.length/N*.72)]/255;const bh=Math.max(3,v*h*.86);
-        const g=cx.createLinearGradient(0,h,0,h-bh);g.addColorStop(0,c1);g.addColorStop(1,c2);
+      if(!freq||freq.length!==Audio.analyser.frequencyBinCount)freq=new Uint8Array(Audio.analyser.frequencyBinCount);
+      Audio.analyser.getByteFrequencyData(freq);
+      const N=44,bw=vw/N,step=Math.floor(freq.length/N*.72)||1;
+      for(let i=0;i<N;i++){
+        const v=freq[i*step]/255,bh=Math.max(3,v*vh*.86);
+        const g=cx.createLinearGradient(0,vh,0,vh-bh);g.addColorStop(0,c1);g.addColorStop(1,c2);
         cx.fillStyle=g;cx.globalAlpha=.5+v*.5;
         const x=i*bw+2,bwi=bw-4;
-        if(cx.roundRect){cx.beginPath();cx.roundRect(x,h-bh,bwi,bh,3);cx.fill();}else cx.fillRect(x,h-bh,bwi,bh);}
-      cx.globalAlpha=1;}
-    else{cx.strokeStyle=c1;cx.globalAlpha=.5;cx.lineWidth=2;cx.beginPath();
-      for(let x=0;x<=w;x+=4){const y=h/2+Math.sin(x*.02+t*1.4)*8*Math.sin(t*.5+x*.004);x===0?cx.moveTo(x,y):cx.lineTo(x,y);}cx.stroke();cx.globalAlpha=1;}
+        if(cx.roundRect){cx.beginPath();cx.roundRect(x,vh-bh,bwi,bh,3);cx.fill();}else cx.fillRect(x,vh-bh,bwi,bh);
+      }
+      cx.globalAlpha=1;
+    }else{
+      cx.strokeStyle=c1;cx.globalAlpha=.5;cx.lineWidth=2;cx.beginPath();
+      for(let x=0;x<=vw;x+=4){const y=vh/2+Math.sin(x*.02+t*1.4)*8*Math.sin(t*.5+x*.004);x===0?cx.moveTo(x,y):cx.lineTo(x,y);}
+      cx.stroke();cx.globalAlpha=1;
+    }
     if(frame%20===0)$('.m-time',body).textContent=fmtSec(Music.elapsed())+' · генеративный эфир ∞';
   }
   draw();
   const off=Music.sub(sync);sync();
-  return{onClose(){cancelAnimationFrame(raf);off();},onResize:resize};
+  return{onClose(){cancelAnimationFrame(raf);off();offSet();},onResize:resize};
 }};

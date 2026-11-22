@@ -5,8 +5,18 @@ import {Audio} from './core/audio.js';
 import {bus} from './core/bus.js';
 import {Apps} from './apps/index.js';
 
+/* кэш высоты рабочей области: без getComputedStyle на каждый кадр перетаскивания */
+let _wb=0,_wbW=-1,_wbT=0;
+
 export const WM={wins:new Map(),z:10,focusedId:null,cascade:0,
-workH(){return innerHeight-parseInt(getComputedStyle(document.documentElement).getPropertyValue('--work-bottom'));},
+workH(){
+  const now=performance.now();
+  if(_wbW!==innerWidth||now-_wbT>1000){
+    _wb=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--work-bottom'))||76;
+    _wbW=innerWidth;_wbT=now;
+  }
+  return innerHeight-_wb;
+},
 open(appId,params={}){
   const app=Apps[appId];if(!app)return null;
   if(app.single){const ex=[...this.wins.values()].find(w=>w.app===appId&&!w.closing);
@@ -36,7 +46,7 @@ open(appId,params={}){
     <div class="rz rz-e"></div><div class="rz rz-s"></div><div class="rz rz-se"></div>
   </section>`);
   win.el=node;win.body=$('.win-body',node);win.titleEl=$('.w-title',node);
-  win.setTitle=t=>{win.title=t;win.titleEl.textContent=t;node.setAttribute('aria-label',t);bus.emit('wins');};
+  win.setTitle=t=>{if(win.title===t)return;win.title=t;win.titleEl.textContent=t;node.setAttribute('aria-label',t);bus.emit('wins');};
   win.title=app.name;
   $('#windows').appendChild(node);
   this.wins.set(id,win);
@@ -85,8 +95,9 @@ bindDrag(win,tb){
           $('.w-btn.max',win.el).innerHTML=icon('square',12);
           win.w=pw;win.h=ph;bx=ev.clientX-pw*clamp(ratio,.1,.9);by=ev.clientY-18;sx=ev.clientX;sy=ev.clientY;
           win.x=bx;win.y=by;this.applyRect(win);win.api?.onResize?.();}}
+      const vh=this.workH();
       win.x=clamp(bx+(ev.clientX-sx),-win.w+90,innerWidth-90);
-      win.y=clamp(by+(ev.clientY-sy),0,this.workH()-40);
+      win.y=clamp(by+(ev.clientY-sy),0,vh-40);
       this.applyRect(win);
       let ns=null;
       if(ev.clientY<=6)ns='max';else if(ev.clientX<=6)ns='left';else if(ev.clientX>=innerWidth-6)ns='right';
@@ -113,8 +124,9 @@ bindResize(win){
       const dirS=h.classList.contains('rz-s')||h.classList.contains('rz-se');
       const app=Apps[win.app];
       const move=ev=>{
+        const vh=this.workH();
         if(dirE)win.w=clamp(bw+ev.clientX-sx,app.minW||300,innerWidth-win.x-4);
-        if(dirS)win.h=clamp(bh+ev.clientY-sy,app.minH||220,this.workH()-win.y-2);
+        if(dirS)win.h=clamp(bh+ev.clientY-sy,app.minH||220,vh-win.y-2);
         this.applyRect(win);win.api?.onResize?.();};
       const up=()=>{h.removeEventListener('pointermove',move);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);win.prev={x:win.x,y:win.y,w:win.w,h:win.h};};
       h.addEventListener('pointermove',move);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
@@ -168,7 +180,7 @@ resizeTo(win,w,h){if(win.state!=='normal')return;const app=Apps[win.app];
   win.w=clamp(w,app.minW||300,innerWidth-16);win.h=clamp(h,app.minH||220,this.workH()-12);
   win.x=clamp(win.x,4,innerWidth-win.w-4);win.y=clamp(win.y,4,this.workH()-win.h-4);
   win.prev={x:win.x,y:win.y,w:win.w,h:win.h};this.setState(win,'normal');},
-onViewport(){const vw=innerWidth,vh=this.workH();
+onViewport(){_wbT=0;const vw=innerWidth,vh=this.workH();
   document.documentElement.classList.toggle('mobile',isMobile());
   this.wins.forEach(win=>{
     if(isMobile()){if(win.state!=='max')this.setState(win,'max',true);}

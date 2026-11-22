@@ -8,6 +8,7 @@ import {Wall} from '../core/wallpaper.js';
 import {notify} from '../core/notifications.js';
 import {WM} from '../wm.js';
 import {Apps} from './index.js';
+import {OS_NAME,BUILD,KERNEL} from '../core/version.js';
 import {joinPath,nodeAt,nodeSize,parentPath,baseName,addNode,removeNode,restoreNode,mkText,mkDir,saveVfs,vfsSize,storageInfo} from '../core/vfs.js';
 
 const CMDS=['help','ls','cd','pwd','cat','touch','mkdir','rm','tree','echo','clear','date','whoami','neofetch','df','open','theme','wallpaper','music','notify','uptime','history','sudo','reboot','exit','about'];
@@ -99,9 +100,9 @@ mount(body,win){
   function printFetch(){
     const art=['   ·  ✦  ·  * ','  ┌─────────┐ ','  │  ◕   ◕  │ ','  │    ▽    │ ','  └─────────┘ ','   *  ·  ✦  · '].join('\n');
     const rows=[
-      ['ОС','NEBULA OS 1.0 «Пульсар»'],
-      ['Ядро','6.2.0-nebula'],
-      ['Сборка','2026.11.21'],
+      ['ОС',OS_NAME],
+      ['Сборка',BUILD],
+      ['Ядро',KERNEL],
       ['Аптайм',fmtUp((Date.now()-session.bootTime)/1000)],
       ['Оболочка','NebulaShell 1.0'],
       ['Экран',`${innerWidth}×${innerHeight}`],
@@ -164,7 +165,8 @@ mount(body,win){
         else if(n.type==='dir')err(`cat: ${n.name}: это папка`);
         else if(n.type==='image')info(`[изображение ${fmtBytes(nodeSize(n))} — откройте: open просмотр]`);
         else print(esc(n.content)||dim('(пустой файл)'));break;}
-      case'touch':{if(!args[0]){err('touch: укажите имя файла');break;}const dir=nodeAt(cwd);const ex=dir.children.find(c=>c.name===args[0]);
+      case'touch':{if(!args[0]){err('touch: укажите имя файла');break;}const dir=nodeAt(cwd);if(!dir){err('touch: папка недоступна');break;}
+        const ex=dir.children.find(c=>c.name===args[0]);
         if(ex){ex.mtime=Date.now();saveVfs(ex);bus.emit('vfs');ok(`${ex.name}: время обновлено`);}
         else{const n=addNode(cwd,mkText(args[0],''));ok(`создан ${n.name}`);}break;}
       case'mkdir':{if(!args[0]){err('mkdir: укажите имя');break;}
@@ -223,7 +225,7 @@ mount(body,win){
         else err('music: play · stop · next');break;}
       case'notify':notify('info','Из терминала',args.join(' ')||'привет, космос ✦');ok('уведомление отправлено');break;
       case'sudo':err(`${settings.username} не входит в список sudoers. Инцидент будет доложен Звёздному совету. 🛸`);Audio.sfx('error');break;
-      case'about':info('NEBULA OS 1.0 «Пульсар» — сборка 2026.11.21. Vanilla JS · Canvas 2D · Web Audio · IndexedDB.');break;
+      case'about':info(`${OS_NAME} — сборка ${BUILD}. Vanilla JS · Canvas 2D · Web Audio · IndexedDB.`);break;
       case'reboot':print('Перезагрузка…','warn');setTimeout(()=>bus.emit('power','restart'),400);break;
       case'exit':WM.close(win);break;
       default:{err(`команда не найдена: ${cmd}`);

@@ -3,19 +3,20 @@ import {uid} from './utils.js';
 import {bus} from './bus.js';
 import {notify} from './notifications.js';
 import {paintScene,makeBlobs} from './wallpaper.js';
+import {KERNEL,BUILD} from './version.js';
 
 /* ============================================================
    nebulaFS на IndexedDB
-   - дерево живёт в памяти (синхронный API для приложений)
-   - каждая мутация пишется в IndexedDB инкрементально
-   - квота — сотни МБ / ГБ вместо ~5 МБ localStorage
+   - дерево в памяти: синхронный API для приложений
+   - инкрементальная запись: только изменённые узлы
+   - квота — десятки ГБ вместо ~5 МБ localStorage
    ============================================================ */
 const DB_NAME='nebula-fs',DB_VER=1,STORE='nodes',ROOT_ID='root';
 const LEGACY_KEY='nebula.vfs.v1';
 
 let vfs=null,db=null,fsMode='memory';
 const dirty=new Set(),deleted=new Set();
-let flushTimer=null,flushPromise=null,warnedAt=0;
+let flushTimer=null,flushPromise=null,warnedAt=0,failCount=0;
 
 export const mkDir=(name,children=[])=>({id:uid(),name,type:'dir',children,ctime:Date.now(),mtime:Date.now()});
 export const mkText=(name,content)=>({id:uid(),name,type:'text',content,ctime:Date.now(),mtime:Date.now()});
@@ -52,8 +53,8 @@ function toRec(node,parentId){
 }
 function collectRecords(root){
   const out=[],parentOf=new Map([[root.id,null]]);
-  const rec=n=>{if(n.type==='dir')n.children.forEach(c=>{parentOf.set(c.id,n.id);rec(c);});};
-  rec(root);
+  const link=n=>{if(n.type==='dir')n.children.forEach(c=>{parentOf.set(c.id,n.id);link(c);});};
+  link(root);
   const emit=n=>{out.push(toRec(n,parentOf.get(n.id)));if(n.type==='dir')n.children.forEach(emit);};
   emit(root);
   return out;
@@ -77,41 +78,45 @@ function buildTree(records){
   return build(rootRec);
 }
 
-/* ---------- отложенная запись ---------- */
-function markDirty(node){if(!node)return;const add=n=>{dirty.add(n.id);deleted.delete(n.id);if(n.type==='dir')n.children.forEach(add);};add(node);}
+/* ---------- очередь записи (без лишнего перезаписывания поддеревьев) ---------- */
+function markNode(node){if(!node)return;dirty.add(node.id);deleted.delete(node.id);}
+function markSubtree(node){if(!node)return;markNode(node);if(node.type==='dir')node.children.forEach(markSubtree);}
 function markDeleted(node){const del=n=>{deleted.add(n.id);dirty.delete(n.id);if(n.type==='dir')n.children.forEach(del);};del(node);}
-function findById(id,node=vfs){if(!node)return null;if(node.id===id)return node;if(node.type==='dir'){for(const c of node.children){const r=findById(id,c);if(r)return r;}}return null;}
-function scheduleFlush(){clearTimeout(flushTimer);flushTimer=setTimeout(()=>{flushVfs();},60);}
+function scheduleFlush(delay){clearTimeout(flushTimer);flushTimer=setTimeout(()=>{flushVfs();},delay??60);}
 
 export function saveVfs(node){
   if(fsMode!=='indexeddb')return true;
-  if(node)markDirty(node);else if(vfs)markDirty(vfs);
+  if(node)markNode(node);else if(vfs)markSubtree(vfs);
   scheduleFlush();
   return true;
 }
 export function flushVfs(){
-  if(fsMode!=='indexeddb')return Promise.resolve(true);
+  if(fsMode!=='indexeddb'||!vfs)return Promise.resolve(true);
   if(flushPromise)return flushPromise;
   flushPromise=(async()=>{
     const ids=[...dirty],dels=[...deleted];
     dirty.clear();deleted.clear();
     if(!ids.length&&!dels.length)return true;
-    const parentOf=new Map([[vfs.id,null]]);
-    const scan=n=>{if(n.type==='dir')n.children.forEach(c=>{parentOf.set(c.id,n.id);scan(c);});};
-    scan(vfs);
+    /* один проход по дереву вместо поиска на каждый узел */
+    const index=new Map();
+    const scan=(n,pid)=>{index.set(n.id,[n,pid]);if(n.type==='dir')n.children.forEach(c=>scan(c,n.id));};
+    scan(vfs,null);
     try{
       const tx=db.transaction(STORE,'readwrite'),s=tx.objectStore(STORE);
       dels.forEach(id=>s.delete(id));
-      ids.forEach(id=>{const n=findById(id);if(n)s.put(toRec(n,parentOf.get(n.id)));});
+      ids.forEach(id=>{const e=index.get(id);if(e)s.put(toRec(e[0],e[1]));});
       await txDone(tx);
+      failCount=0;
       return true;
     }catch(e){
       ids.forEach(id=>dirty.add(id));
+      failCount++;
       if(Date.now()-warnedAt>8000){warnedAt=Date.now();
         notify('error','Ошибка записи nebulaFS',e&&e.name==='QuotaExceededError'?'Хранилище браузера переполнено. Освободите место на диске.':'Не удалось записать файлы на диск. Изменения пока живут только в памяти.');}
       return false;
     }finally{
-      if(dirty.size||deleted.size)scheduleFlush();
+      /* экспоненциальная пауза вместо бесконечного ретрая */
+      if((dirty.size||deleted.size)&&failCount<=3)scheduleFlush(failCount?600*Math.pow(2,failCount):60);
     }
   })().finally(()=>{flushPromise=null;});
   return flushPromise;
@@ -134,14 +139,14 @@ function seedVfs(){
   const imgs=seedImages();
   const root=mkDir('',[
     mkDir('Документы',[
-      mkText('readme.md',`# Добро пожаловать в NEBULA OS\n\nЭто полноценная операционная система, живущая в вашей вкладке браузера.\n\n## Что внутри\n- **Файлы** — проводник с папками, поиском и сортировкой\n- **Терминал** — настоящая оболочка: \`ls\`, \`cd\`, \`cat\`, \`tree\`, \`echo … > файл\`\n- **Графика** — рисование с кистями, фигурами и экспортом PNG\n- **Волна FM** — генеративная музыка, синтезируется прямо сейчас\n- **Сапёр** — классика с рекордами\n\n## Хранилище\n> Файлы лежат в **IndexedDB** — это сотни мегабайт вместо прежних 5 МБ localStorage.\n> Наберите \`df\` в терминале, чтобы увидеть реальную квоту.\n\nПеретащите окно к краю экрана, чтобы оно прилипло. Правый клик по рабочему столу откроет контекстное меню.\n\n---\nСделано с любовью к космосу ✦`),
+      mkText('readme.md',`# Добро пожаловать в NEBULA OS\n\nЭто полноценная операционная система, живущая в вашей вкладке браузера.\n\n## Что внутри\n- **Файлы** — проводник с папками, поиском и сортировкой\n- **Терминал** — настоящая оболочка: \`ls\`, \`cd\`, \`cat\`, \`tree\`, \`echo … > файл\`\n- **Графика** — рисование с кистями, фигурами и экспортом PNG\n- **Волна FM** — генеративная музыка, синтезируется прямо сейчас\n- **Сапёр** — классика с рекордами\n\n## Хранилище\n> Файлы лежат в **IndexedDB** — это десятки гигабайт вместо прежних 5 МБ localStorage.\n> Наберите \`df\` в терминале, чтобы увидеть реальную квоту.\n\nПеретащите окно к краю экрана, чтобы оно прилипло. Правый клик по рабочему столу откроет контекстное меню.\n\n---\nСделано с любовью к космосу ✦`),
       mkText('заметки.txt','Идеи для сегодняшнего вечера:\n\n1. Послушать «Пульсар» на Волне FM — бас отличный.\n2. Нарисовать свою туманность в Графике.\n3. В терминале набрать neofetch и df — узнать, сколько места осталось.\n4. Пройти Сапёра на «Любителе» быстрее 90 секунд.\n\nP.S. Команда sudo в терминале не сработает. Но попробовать стоит.'),
       mkText('список дел.md','# Список дел\n\n- [x] Запустить NEBULA OS\n- [x] Осмотреть рабочий стол\n- [ ] Создать файл через терминал: echo привет > файл.txt\n- [ ] Сохранить рисунок в Изображения\n- [ ] Победить Сапёра\n- [ ] Сменить акцент на Магенту\n\n> Отмечайте пункты прямо здесь — Блокнот сохранит всё по Ctrl+S.'),
     ]),
     mkDir('Изображения',[mkImg('аврора.png',imgs.aurora),mkImg('кольца.png',imgs.planet)]),
     mkDir('Музыка',[mkText('плейлист.txt','ВОЛНА FM — генеративный эфир\n\nАврора  — медленные пады, ре-минор, 62 BPM\nДрейф   — невесомость, фа-лидийский, 50 BPM\nПульсар — ритмичный бас, ля-минор, 96 BPM\nИон     — колокольчики, ре-мажор, 76 BPM\n\nМузыка не повторяется: каждая нота синтезируется\nWeb Audio прямо во время прослушивания.\n\nВ терминале: music play / music stop / music next')]),
     mkDir('Система',[
-      mkText('ядро.txt','NEBULA KERNEL 6.2.0-pulsar\nСборка: 2026.11.21\nПланировщик: rAF-fair\nДрайверы: aurora-gpu, webaudio-synth, canvas2d\nФайловая система: nebulaFS (IndexedDB, объект «nodes»)\nГравитация: 9.81 м/с² (калибруется при загрузке)'),
+      mkText('ядро.txt',`NEBULA KERNEL ${KERNEL}\nСборка: ${BUILD}\nПланировщик: rAF-fair\nДрайверы: aurora-gpu, webaudio-synth, canvas2d\nФайловая система: nebulaFS (IndexedDB, объект «nodes»)\nГравитация: 9.81 м/с² (калибруется при загрузке)`),
       mkText('лицензия.txt','ЛИЦЕНЗИЯ ЗВЁЗДНОГО СОВЕТА v1.0\n\nРазрешается: пользоваться, изучать, модифицировать,\nпоказывать друзьям и говорить «вау».\n\nЗапрещается: удалять туманности без резервных копий.\n\nПрограмма поставляется «как есть», с блёстками\nи без гарантий межгалактического масштаба.')]),
   ]);
   root.id=ROOT_ID;
@@ -154,18 +159,18 @@ export async function loadVfs(){
     db=await openDB();
     db.onversionchange=()=>{try{db.close();}catch(e){}};
     fsMode='indexeddb';
-    let records=await readAll();
+    const records=await readAll();
     if(!records.length){
       const legacy=store.get(LEGACY_KEY,null);
       if(legacy&&legacy.v===1&&legacy.root&&legacy.root.type==='dir'){
         legacy.root.id=ROOT_ID;
         vfs=legacy.root;
         await writeRecords(collectRecords(vfs));
-        store.del(LEGACY_KEY);
       }else{
         vfs=seedVfs();
         await writeRecords(collectRecords(vfs));
       }
+      store.del(LEGACY_KEY);
     }else{
       vfs=buildTree(records);
       if(!vfs){vfs=seedVfs();await writeRecords(collectRecords(vfs));}
@@ -185,6 +190,7 @@ export async function loadVfs(){
 }
 export async function wipeVfs(){
   store.del(LEGACY_KEY);
+  if(flushPromise){try{await flushPromise;}catch(e){}}
   dirty.clear();deleted.clear();clearTimeout(flushTimer);
   if(fsMode!=='indexeddb'||!db)return;
   const tx=db.transaction(STORE,'readwrite');
@@ -212,14 +218,14 @@ export function uniqueName(dir,name){if(!dir.children.some(c=>c.name===name))ret
 export function addNode(dirPath,node){
   const dir=nodeAt(dirPath);if(!dir||dir.type!=='dir')return null;
   node.name=uniqueName(dir,node.name);dir.children.push(node);dir.mtime=Date.now();
-  if(fsMode==='indexeddb'){markDirty(node);markDirty(dir);scheduleFlush();}
+  if(fsMode==='indexeddb'){markSubtree(node);markNode(dir);scheduleFlush();}
   bus.emit('vfs');return node;
 }
 export function removeNode(path){
   const par=nodeAt(parentPath(path));if(!par)return null;
   const i=par.children.findIndex(c=>c.name===baseName(path));if(i<0)return null;
   const[node]=par.children.splice(i,1);par.mtime=Date.now();
-  if(fsMode==='indexeddb'){markDeleted(node);markDirty(par);scheduleFlush();}
+  if(fsMode==='indexeddb'){markDeleted(node);markNode(par);scheduleFlush();}
   bus.emit('vfs');
   return{node,parentPath:parentPath(path),index:i};
 }
@@ -228,7 +234,7 @@ export function restoreNode(rec){
   if(!par||par.type!=='dir'){par=vfs;rec.parentPath='/';}
   rec.node.name=uniqueName(par,rec.node.name);
   par.children.splice(Math.min(rec.index,par.children.length),0,rec.node);par.mtime=Date.now();
-  if(fsMode==='indexeddb'){markDirty(rec.node);markDirty(par);scheduleFlush();}
+  if(fsMode==='indexeddb'){markSubtree(rec.node);markNode(par);scheduleFlush();}
   bus.emit('vfs');
 }
 export function renameNode(path,newName){
@@ -238,7 +244,7 @@ export function renameNode(path,newName){
   if(!node||!par)return false;
   if(newName!==node.name&&par.children.some(c=>c.name===newName)){notify('warn','Имя занято',`«${newName}» уже существует в этой папке.`);return false;}
   node.name=newName;node.mtime=Date.now();
-  if(fsMode==='indexeddb'){markDirty(node);scheduleFlush();}
+  if(fsMode==='indexeddb'){markNode(node);scheduleFlush();}
   bus.emit('vfs');return true;
 }
 export function findPathById(id,node=vfs,path='/'){if(!node)return null;if(node.id===id)return path;if(node.type==='dir'){for(const c of node.children){const r=findPathById(id,c,normPath(path+'/'+c.name));if(r)return r;}}return null;}
