@@ -5,11 +5,12 @@ import {bus} from './core/bus.js';
 import {session} from './core/session.js';
 import {Audio} from './core/audio.js';
 import {Music} from './core/music.js';
+import {FS,isHandheld} from './core/fullscreen.js';
 import {notifications,notify,markNotificationsRead} from './core/notifications.js';
 import {openContext,closeContext} from './core/context.js';
 import {dialogOpen,cancelDialog} from './core/dialogs.js';
 import {openFileNode} from './core/launch.js';
-import {nodeAt,addNode,mkText,recentFiles,searchFiles,parentPath} from './core/vfs.js';
+import {nodeAt,recentFiles,searchFiles,parentPath} from './core/vfs.js';
 import {WM} from './wm.js';
 import {Apps} from './apps/index.js';
 import {login,lockScreen,powerAction,showLock,bootSequence} from './boot.js';
@@ -23,6 +24,17 @@ let lastTap={app:null,t:0};
 
 export function startOpen(){return $('#startMenu').classList.contains('open');}
 function syncUser(){$('#smName').textContent=settings.username;$('#lockName').textContent=settings.username;}
+function syncThemeColor(){const m=$('meta[name="theme-color"]');if(m)m.setAttribute('content',settings.theme==='light'?'#f3f4ff':'#05060f');}
+function syncFsUI(){
+  const on=FS.active(),glyph=on?'compress':'expand';
+  const b=$('#trayFs');
+  if(b){b.innerHTML=icon(glyph,17);b.classList.toggle('on',on);
+    b.title=on?'Выйти из полного экрана':'Полный экран';
+    b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed',String(on));}
+  const l=$('#lockFs');
+  if(l){l.innerHTML=icon(glyph,18);l.classList.toggle('on',on);
+    l.title=on?'Выйти из полного экрана':'Полный экран';l.setAttribute('aria-label',l.title);}
+}
 function renderDock(){
   const box=$('#dockApps');const wins=[...WM.wins.values()].filter(w=>!w.closing);
   let html='';
@@ -104,7 +116,11 @@ export function closePopover(){popState=null;$('#popover').classList.remove('ope
 function renderPopover(){
   const p=$('#popover');if(!popState)return;
   if(popState==='quick'){
+    const fsOn=FS.active(),fsLock=FS.standalone();
     p.innerHTML=`<div class="pop-title"><span>Быстрые настройки</span><button class="ibtn q-theme" title="Сменить тему">${icon(settings.theme==='dark'?'sun':'moon',15)}</button></div>
+    <div class="qrow"><span class="qi">${icon(fsOn?'compress':'expand',17)}</span>
+      <div class="qt"><b>Полный экран</b><span>${esc(FS.statusText())}</span></div>
+      <label class="tgl"><input type="checkbox" class="q-fs" ${fsOn?'checked':''} ${fsLock?'disabled':''}><i></i></label></div>
     <div class="qrow"><span class="qi">${icon(wifi.on?'wifi':'wifioff',17)}</span><div class="qt"><b>Wi-Fi</b><span>${wifi.on?esc(wifi.net):'отключено'}</span></div>
       <label class="tgl"><input type="checkbox" class="q-wifi" ${wifi.on?'checked':''}><i></i></label></div>
     ${wifi.on?`<div style="padding:2px 4px 8px">${['Nebula-5G','Stardust_2.4','ORBITAL-GUEST'].map(n=>`<button class="net-item ${wifi.net===n?'cur':''}" data-net="${n}">${wifi.net===n?icon('check',14):icon('wifi',14)}<span>${n}</span>${n!=='Nebula-5G'?`<span class="lock">${icon('lock',12)}</span>`:''}</button>`).join('')}</div>`:''}
@@ -114,6 +130,7 @@ function renderPopover(){
     <div class="qrow"><span class="qi">${batteryIcon(battery.level,battery.charging)}</span><div class="qt"><b>Батарея — ${Math.round(battery.level*100)}%</b><span>${battery.charging?'заряжается':battery.real?'от батареи':'симметрия космоса · разряд идёт'}</span></div></div>
     <div style="padding-top:8px;border-top:1px solid var(--border);margin-top:6px"><button class="btn q-all" style="width:100%">${icon('sliders',14)} Все настройки</button></div>`;
     $('.q-theme',p).addEventListener('click',()=>{setSetting('theme',settings.theme==='dark'?'light':'dark');renderPopover();});
+    $('.q-fs',p).addEventListener('change',async e=>{const want=e.target.checked;e.target.disabled=true;await FS.set(want);renderPopover();});
     $('.q-wifi',p).addEventListener('change',e=>{wifi.on=e.target.checked;if(!wifi.on)wifi.net='Nebula-5G';syncWifiUI();renderPopover();notify(wifi.on?'success':'warn','Wi-Fi',wifi.on?`Подключено к ${wifi.net}.`:'Беспроводная связь отключена. Космос молчит.');});
     $$('.net-item',p).forEach(b=>b.addEventListener('click',()=>{
       if(wifi.connecting===b.dataset.net||wifi.net===b.dataset.net)return;
@@ -122,7 +139,7 @@ function renderPopover(){
     const qv=$('.q-vol',p);qv.style.setProperty('--val',qv.value+'%');
     qv.addEventListener('input',()=>{setSetting('volume',+qv.value);qv.style.setProperty('--val',qv.value+'%');qv.closest('.qrow').lastElementChild.textContent=qv.value+'%';});
     $('.q-mute',p).addEventListener('click',()=>{toggleSound();renderPopover();});
-    $('.q-all',p).addEventListener('click',()=>{closePopover();WM.open('settings');});
+    $('.q-all',p).addEventListener('click',()=>{closePopover();WM.open('settings',{section:'system'});});
   }
   else if(popState==='calendar'){
     const now=new Date(),d=new Date(now.getFullYear(),now.getMonth()+calOffset,1);
@@ -183,19 +200,15 @@ export function initShell(){
   $('#powerOn').innerHTML=icon('power',34);
   $('#loginBtn').innerHTML='Войти в систему '+icon('chevR',16);
   $('#trayBell').insertAdjacentHTML('afterbegin',icon('bell',17));
-  renderDesktop();renderDock();syncUser();syncSoundUI();syncWifiUI();syncTrayMusic();tickClock();
+  renderDesktop();renderDock();syncUser();syncSoundUI();syncWifiUI();syncTrayMusic();syncFsUI();syncThemeColor();tickClock();
   setInterval(tickClock,1000);
   if(navigator.getBattery){navigator.getBattery().then(b=>{battery.real=true;
     const upd=()=>{battery.level=b.level;battery.charging=b.charging;syncQuickIcon();if(popState==='quick')renderPopover();};
     upd();b.addEventListener('levelchange',upd);b.addEventListener('chargingchange',upd);}).catch(()=>{});}
 
-  /* иконки рабочего стола: клик — выбор, двойной клик / Enter / тап — запуск */
   $('#desktopIcons').addEventListener('click',e=>{
     const b=e.target.closest('.dicon');if(!b)return;
     activateIcon(b,e.detail===0);});
-  $('#desktopIcons').addEventListener('keydown',e=>{
-    const b=e.target.closest('.dicon');if(!b)return;
-    if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();lastTap={app:null,t:0};launchFromIcon(b,b.dataset.app);}});
   $('#desktop').addEventListener('pointerdown',e=>{
     if(!e.target.closest('.dicon,.wchip')){$$('.dicon').forEach(x=>x.classList.remove('sel'));lastTap={app:null,t:0};}});
   $('#desktop').addEventListener('contextmenu',e=>{
@@ -211,6 +224,7 @@ export function initShell(){
     openContext(e.clientX,e.clientY,[
       {icon:'fileplus',label:'Новая заметка',fn:()=>WM.open('editor')},
       {icon:'image',label:'Сменить обои',fn:()=>{const keys=Object.keys(WALL_NAMES);const next=keys[(keys.indexOf(settings.wallpaper)+1)%keys.length];setSetting('wallpaper',next);notify('info','Обои',`Теперь: ${WALL_NAMES[next]}.`);}},
+      {icon:FS.active()?'compress':'expand',label:FS.active()?'Выйти из полного экрана':'Полный экран',kbd:'Ctrl+Alt+F',fn:()=>FS.toggle()},
       {icon:'restart',label:'Обновить',fn:refreshDesktopAnim},'sep',
       {icon:'terminal',label:'Открыть терминал',kbd:'Ctrl+Alt+T',fn:()=>WM.open('terminal')},
       {icon:'activity',label:'Монитор системы',fn:()=>WM.open('monitor')},
@@ -240,7 +254,10 @@ export function initShell(){
     if(e.target.closest('.dock-app,.tray-btn,#startBtn'))return;
     openContext(e.clientX,e.clientY,[
       {icon:'minus',label:'Показать рабочий стол',fn:()=>$('#showDesktop').click()},
+      {icon:FS.active()?'compress':'expand',label:FS.active()?'Выйти из полного экрана':'Полный экран',fn:()=>FS.toggle()},
       {icon:'activity',label:'Монитор системы',fn:()=>WM.open('monitor')}]);});
+  $('#trayFs').addEventListener('click',()=>FS.toggle());
+  $('#lockFs').addEventListener('click',()=>FS.toggle());
   $('#trayQuick').addEventListener('click',()=>openPopover('quick'));
   $('#trayBell').addEventListener('click',()=>openPopover('notif'));
   $('#trayClock').addEventListener('click',()=>{calOffset=0;openPopover('calendar');});
@@ -293,10 +310,14 @@ export function initShell(){
       if(popState){closePopover();return;}
       if(startOpen()){closeStart();return;}
       return;}
-    if(!session.loggedIn){if(e.key==='Enter'&&$('#lockScreen').classList.contains('on'))login();return;}
+    if(!session.loggedIn){
+      if(e.key==='Enter'&&$('#lockScreen').classList.contains('on'))login();
+      if(e.ctrlKey&&e.altKey&&e.code==='KeyF'){e.preventDefault();FS.toggle();}
+      return;}
     if(e.ctrlKey&&e.altKey){
       const map={KeyT:'terminal',KeyE:'explorer',KeyM:'music'};
       if(map[e.code]){e.preventDefault();WM.open(map[e.code]);return;}
+      if(e.code==='KeyF'){e.preventDefault();FS.toggle();return;}
       if(e.code==='KeyL'){e.preventDefault();lockScreen();return;}
       const dir={ArrowLeft:[-24,0],ArrowRight:[24,0],ArrowUp:[0,-24],ArrowDown:[0,24]}[e.code];
       if(dir){const w=WM.focused();if(w&&w.state==='normal'&&!isMobileNow()){e.preventDefault();
@@ -307,10 +328,16 @@ export function initShell(){
     const w=WM.focused();
     if(w&&w.keyHandler&&(w.el.contains(e.target)||e.target===document.body))w.keyHandler(e);
   });
-  addEventListener('resize',()=>{clearTimeout(initShell._rt);initShell._rt=setTimeout(()=>WM.onViewport(),140);});
+
+  const onViewport=()=>{clearTimeout(initShell._rt);initShell._rt=setTimeout(()=>{FS.applyMetrics();WM.onViewport();},140);};
+  addEventListener('resize',onViewport);
+  addEventListener('orientationchange',onViewport);
+  if(window.visualViewport)visualViewport.addEventListener('resize',onViewport);
+
   bus.on('wins',renderDock);
-  bus.on('settings',k=>{syncSoundUI();syncWifiUI();if(k==='username')syncUser();if(k==='theme'&&popState==='quick')renderPopover();});
+  bus.on('settings',k=>{syncSoundUI();syncWifiUI();syncThemeColor();if(k==='username')syncUser();if(k==='theme'&&popState==='quick')renderPopover();});
   bus.on('vfs',()=>{if(startOpen()&&!$('#smSearch').value)renderStart('');});
   bus.on('notifications',()=>{if(popState==='notif')renderPopover();});
+  bus.on('fullscreen',()=>{syncFsUI();if(popState==='quick')renderPopover();WM.onViewport();});
 }
 function isMobileNow(){return innerWidth<=720;}

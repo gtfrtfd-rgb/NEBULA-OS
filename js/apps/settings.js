@@ -9,6 +9,7 @@ import {notify} from '../core/notifications.js';
 import {confirmDlg} from '../core/dialogs.js';
 import {storageInfo,requestPersist,wipeVfs} from '../core/vfs.js';
 import {paintScene,Wall} from '../core/wallpaper.js';
+import {FS,isHandheld} from '../core/fullscreen.js';
 import {WM} from '../wm.js';
 import {BUILD_LINE,KERNEL} from '../core/version.js';
 
@@ -36,10 +37,16 @@ mount(body,win,params){
     pb.disabled=s.persisted||s.mode!=='indexeddb';
     pb.innerHTML=s.persisted?icon('check',13)+' Хранилище постоянно':icon('lock',13)+' Сделать постоянным';
   }
-  function refreshStorage(){
-    storageInfo().then(s=>{if(sb.isConnected&&!win.closing)paintStorage(s);}).catch(()=>{});
-  }
+  function refreshStorage(){storageInfo().then(s=>{if(sb.isConnected&&!win.closing)paintStorage(s);}).catch(()=>{});}
   function queueStorage(){clearTimeout(stTimer);stTimer=setTimeout(()=>{if(!win.closing&&!win.minimized)refreshStorage();},400);}
+  function syncFsRow(){
+    const t=$('.fs-toggle',sb);if(!t)return;
+    t.checked=FS.active();t.disabled=FS.standalone();
+    $('.fs-status',sb).textContent=FS.statusText();
+    const b=$('.fs-now',sb);
+    if(b){b.innerHTML=icon(FS.active()?'compress':'expand',13)+(FS.active()?' Выйти из полного экрана':' Включить сейчас');
+      b.disabled=FS.standalone();}
+  }
 
   function render(){renderNav();
     if(section==='look'){
@@ -80,7 +87,19 @@ mount(body,win,params){
       $('.test-snd',sb).addEventListener('click',()=>{Audio.init();Audio.resume();Audio.sfx('chime');});
     }
     else if(section==='system'){
-      sb.innerHTML=`<div class="set-h">Система</div><div class="set-sub">Ресурсы, качество и обслуживание.</div>
+      sb.innerHTML=`<div class="set-h">Система</div><div class="set-sub">Экран, ресурсы и обслуживание.</div>
+      <div class="mon-card" style="margin:0 0 14px">
+        <div class="mc-l"><span>Полноэкранный режим</span><span>${FS.standalone()?'PWA':FS.supported()?'Fullscreen API':'компактный'}</span></div>
+        <div class="set-row" style="border-bottom:0;padding-bottom:4px"><div class="sr-t"><b>Во весь экран</b><span class="fs-status">${esc(FS.statusText())}</span></div>
+          <label class="tgl"><input type="checkbox" class="fs-toggle" ${FS.active()?'checked':''} ${FS.standalone()?'disabled':''}><i></i></label></div>
+        <div class="set-row" style="border-bottom:0"><div class="sr-t"><b>Входить автоматически</b><span>Полный экран включается сразу после входа в систему</span></div>
+          <label class="tgl"><input type="checkbox" class="fs-auto" ${settings.fsAuto?'checked':''}><i></i></label></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <button class="btn sm fs-now">${icon('expand',13)} Включить сейчас</button>
+          <button class="btn sm fs-home">${icon('phone',13)} На экран «Домой»</button>
+        </div>
+        <p style="font-size:11px;color:var(--faint);margin-top:10px;line-height:1.55">На телефоне полный экран прячет адресную строку и панели браузера. В Safari страница не получает полный экран — там включается компактный режим, а настоящий полный экран даёт запуск с экрана «Домой». Горячая клавиша: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>.</p>
+      </div>
       <div class="set-row"><div class="sr-t"><b>Имя пользователя</b><span>Отображается на экране входа и в терминале</span></div>
         <input class="inp user-inp" value="${esc(settings.username)}" maxlength="24" style="width:170px"></div>
       <div class="set-row"><div class="sr-t"><b>Качество рендера</b><span>Экономный режим: 30 FPS, меньше звёзд, без стекла</span></div>
@@ -99,6 +118,12 @@ mount(body,win,params){
       <div style="padding:4px 0 16px;display:flex;gap:9px;flex-wrap:wrap">
         <button class="btn open-mon">${icon('activity',14)} Монитор системы</button>
         <button class="btn danger reset-os">${icon('alert',14)} Сбросить NEBULA OS</button></div>`;
+      $('.fs-toggle',sb).addEventListener('change',async e=>{const want=e.target.checked;e.target.disabled=true;await FS.set(want);syncFsRow();});
+      $('.fs-auto',sb).addEventListener('change',e=>{setSetting('fsAuto',e.target.checked);
+        if(e.target.checked&&isHandheld()&&!FS.active())FS.enter({silent:true});
+        notify('info','Автополный экран',e.target.checked?'При следующем входе NEBULA сразу займёт весь экран.':'Автоматический вход в полный экран выключен.');});
+      $('.fs-now',sb).addEventListener('click',async()=>{await FS.toggle();syncFsRow();});
+      $('.fs-home',sb).addEventListener('click',()=>notify('info','На экран «Домой»','Меню браузера → «Установить приложение» / «На экран Домой». Запуск с иконки открывает NEBULA без адресной строки — настоящий полный экран.',null,11000));
       $('.q-sel',sb).value=settings.quality;
       $('.q-sel',sb).addEventListener('change',e=>setSetting('quality',e.target.value));
       $('.user-inp',sb).addEventListener('change',e=>{const v=e.target.value.trim()||'Космонавт';setSetting('username',v);notify('success','Имя обновлено',`Теперь вы — ${v}.`);});
@@ -113,7 +138,7 @@ mount(body,win,params){
         const yes=await confirmDlg({title:'Сбросить систему?',msg:'Все файлы, рисунки, настройки и рекорды будут удалены безвозвратно. База IndexedDB будет очищена, NEBULA перезагрузится с заводским содержимым.',ok:'Стереть всё',danger:true});
         if(yes){try{await wipeVfs();}catch(e){}
           store.del('nebula.settings.v1');store.del('nebula.best.v1');location.reload();}});
-      refreshStorage();
+      syncFsRow();refreshStorage();
     }
     else{
       sb.innerHTML=`<div class="set-h">О системе</div><div class="set-sub">Паспорт космического аппарата.</div>
@@ -123,6 +148,7 @@ mount(body,win,params){
         <dt>Оболочка</dt><dd>NebulaShell 1.0</dd>
         <dt>Движок</dt><dd>Vanilla JS · Canvas 2D · Web Audio</dd>
         <dt>Файловая система</dt><dd>nebulaFS (IndexedDB)</dd>
+        <dt>Режим экрана</dt><dd>${FS.standalone()?'установленное приложение':FS.native()?'нативный полный экран':FS.isPseudo()?'компактный':'окно браузера'}</dd>
         <dt>Экран</dt><dd>${innerWidth} × ${innerHeight}</dd>
         <dt>Платформа</dt><dd>${esc(navigator.userAgentData?.platform||navigator.platform||'космос')}</dd>
         <dt>Аптайм</dt><dd class="about-up">${fmtUp((Date.now()-session.bootTime)/1000)}</dd></dl>
@@ -134,8 +160,10 @@ mount(body,win,params){
   const off=bus.on('settings',k=>{
     if(k==='volume'){const r=$('.vol-range',sb);if(r){r.value=settings.volume;r.style.setProperty('--val',r.value+'%');$('.vol-label',sb)?.replaceChildren(settings.volume+'%');}}
     if(k==='sound'){const t=$('[data-set="sound"]',sb);if(t)t.checked=settings.sound;}
-    if(k==='musicVol'){const r=$('.mvol-range',sb);if(r){r.value=settings.musicVol;r.style.setProperty('--val',r.value+'%');}}});
+    if(k==='musicVol'){const r=$('.mvol-range',sb);if(r){r.value=settings.musicVol;r.style.setProperty('--val',r.value+'%');}}
+    if(k==='fsAuto'){const t=$('.fs-auto',sb);if(t)t.checked=settings.fsAuto;}});
   const offVfs=bus.on('vfs',()=>{if(section==='system')queueStorage();});
+  const offFs=bus.on('fullscreen',()=>{if(section==='system')syncFsRow();});
   render();
-  return{onClose(){off();offVfs();clearTimeout(stTimer);},remount(p){if(p.section){section=p.section;render();}}};
+  return{onClose(){off();offVfs();offFs();clearTimeout(stTimer);},remount(p){if(p.section){section=p.section;render();}}};
 }};

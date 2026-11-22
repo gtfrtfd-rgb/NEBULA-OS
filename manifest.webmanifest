@@ -1,0 +1,20 @@
+{
+  "name": "NEBULA OS — веб-операционная система",
+  "short_name": "NEBULA",
+  "description": "Оконный менеджер, файлы в IndexedDB, терминал, генеративная музыка и сапёр — прямо в браузере.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "nebula-os",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#05060f",
+  "theme_color": "#05060f",
+  "categories": ["productivity", "utilities", "games"],
+  "icons": [
+    { "src": "icons/nebula.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/nebula.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

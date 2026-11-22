@@ -16,7 +16,8 @@ export let settings=Object.assign({
   accent:'violet',wallpaper:'aurora',theme:'dark',quality:'high',
   animations:!matchMedia('(prefers-reduced-motion: reduce)').matches,
   sound:true,volume:70,uiSounds:true,musicVol:80,username:'Космонавт',
-  explorerView:'grid',explorerSort:'name',explorerAsc:true
+  explorerView:'grid',explorerSort:'name',explorerAsc:true,
+  fsAuto:false,fsHint:false
 },store.get('nebula.settings.v1',{}));
 if(!ACCENTS[settings.accent])settings.accent='violet';
 if(!WALL_NAMES[settings.wallpaper])settings.wallpaper='aurora';

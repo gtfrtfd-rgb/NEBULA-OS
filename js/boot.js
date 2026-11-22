@@ -1,11 +1,12 @@
 import {$} from './core/utils.js';
 import {session} from './core/session.js';
-import {settings} from './core/settings.js';
+import {settings,setSetting} from './core/settings.js';
 import {bus} from './core/bus.js';
 import {Audio} from './core/audio.js';
 import {Music} from './core/music.js';
 import {notify} from './core/notifications.js';
 import {closeContext} from './core/context.js';
+import {FS,isHandheld} from './core/fullscreen.js';
 import {WM} from './wm.js';
 import {closeStart,closePopover,tickClock} from './shell.js';
 
@@ -30,17 +31,24 @@ export function showLock(){
   $('#bootScreen').classList.add('hide');
   setTimeout(()=>{$('#bootScreen').style.display='none';},520);
   $('#lockScreen').classList.add('on');
+  FS.applyMetrics();
   tickClock();setTimeout(()=>$('#loginBtn').focus(),300);
 }
 export function login(){
   if(session.loggedIn)return;
   Audio.init();Audio.resume();
+  /* жест пользователя ещё активен — входим в полный экран сразу */
+  if(settings.fsAuto&&isHandheld()&&!FS.active())FS.enter({silent:true});
   session.loggedIn=true;session.bootTime=Date.now();
   document.body.classList.remove('locked');document.body.classList.add('entered');
   $('#lockScreen').classList.remove('on');
   Audio.sfx('chime');
   if(!session.welcomed){session.welcomed=true;
     setTimeout(()=>notify('info',`Добро пожаловать, ${settings.username}!`,'NEBULA OS готова к полёту. В Справке — горячие клавиши и секреты.',{label:'Открыть справку',fn:()=>WM.open('help')},7000),900);
+    if(isHandheld()&&!settings.fsHint&&!FS.active()){
+      setTimeout(()=>{setSetting('fsHint',true);
+        notify('info','Полный экран','Уберите адресную строку браузера — NEBULA займёт весь экран телефона.',{label:'Включить',fn:()=>FS.enter()},9000);},4200);
+    }
     setTimeout(()=>notify('success','Совет пилоту','Правый клик по рабочему столу — контекстное меню. Бросьте окно к краю экрана — оно прилипнет.',null,8000),9500);}
 }
 export function lockScreen(){
