@@ -101,6 +101,7 @@ mount(body,win){
     const rows=[
       ['ОС','NEBULA OS 1.0 «Пульсар»'],
       ['Ядро','6.2.0-nebula'],
+      ['Сборка','2026.11.21'],
       ['Аптайм',fmtUp((Date.now()-session.bootTime)/1000)],
       ['Оболочка','NebulaShell 1.0'],
       ['Экран',`${innerWidth}×${innerHeight}`],
@@ -222,7 +223,7 @@ mount(body,win){
         else err('music: play · stop · next');break;}
       case'notify':notify('info','Из терминала',args.join(' ')||'привет, космос ✦');ok('уведомление отправлено');break;
       case'sudo':err(`${settings.username} не входит в список sudoers. Инцидент будет доложен Звёздному совету. 🛸`);Audio.sfx('error');break;
-      case'about':info('NEBULA OS 1.0 «Пульсар» — сборка 2026.11.19. Vanilla JS · Canvas 2D · Web Audio · IndexedDB.');break;
+      case'about':info('NEBULA OS 1.0 «Пульсар» — сборка 2026.11.21. Vanilla JS · Canvas 2D · Web Audio · IndexedDB.');break;
       case'reboot':print('Перезагрузка…','warn');setTimeout(()=>bus.emit('power','restart'),400);break;
       case'exit':WM.close(win);break;
       default:{err(`команда не найдена: ${cmd}`);

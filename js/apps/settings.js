@@ -115,7 +115,7 @@ mount(body,win,params){
     }
     else{
       sb.innerHTML=`<div class="set-h">О системе</div><div class="set-sub">Паспорт космического аппарата.</div>
-      <div class="about-logo">${tileHtml({icon:'logo',g:['#7c6bff','#22d3ee']},58)}<div><b>NEBULA OS</b><span>Версия 1.0 «Пульсар» · сборка 2026.11.19</span></div></div>
+      <div class="about-logo">${tileHtml({icon:'logo',g:['#7c6bff','#22d3ee']},58)}<div><b>NEBULA OS</b><span>Версия 1.0 «Пульсар» · сборка 2026.11.21</span></div></div>
       <dl class="about-grid">
         <dt>Ядро</dt><dd>6.2.0-nebula</dd>
         <dt>Оболочка</dt><dd>NebulaShell 1.0</dd>
