@@ -23,6 +23,8 @@ jobs:
   build:
     name: Проверка и сборка
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,13 +50,20 @@ jobs:
         run: |
           node -e "const m=JSON.parse(require('node:fs').readFileSync('manifest.webmanifest','utf8'));if(!m.name||!m.start_url||!m.icons?.length)throw new Error('manifest неполный');console.log('manifest OK:',m.name)"
 
-      - name: Версии в version.js и sw.js должны совпадать
+      - name: Версия едина во всех источниках
+        id: ver
         run: |
           set -euo pipefail
           V=$(grep -oP "export const VERSION='\K[^']+" js/core/version.js)
           S=$(grep -oP "const VERSION = '\K[^']+" sw.js)
           echo "version.js=$V  sw.js=$S"
           [ "$V" = "$S" ] || { echo "::error::VERSION в sw.js не совпадает с version.js"; exit 1; }
+          grep -q "NEBULA OS $V" index.html || { echo "::error::title в index.html не совпадает с версией"; exit 1; }
+          grep -q "OS · $V" index.html || { echo "::error::boot-sub в index.html не совпадает с версией"; exit 1; }
+          grep -q "NEBULA OS $V" 404.html || { echo "::error::404.html не совпадает с версией"; exit 1; }
+          grep -q "версия-$V-" README.md || { echo "::error::бейдж версии в README не совпадает"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Версия $V согласована во всех файлах"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -108,9 +117,9 @@ jobs:
       - name: Итог
         run: |
           {
-            echo "### 🛸 NEBULA OS опубликована"
+            echo "### 🛸 NEBULA OS ${{ needs.build.outputs.version }} опубликована"
             echo ""
             echo "- Адрес: ${{ steps.deployment.outputs.page_url }}"
             echo "- Коммит: \`${GITHUB_SHA::7}\`"
-            echo "- Кэш воркера: \`nebula-app-1.0.1-${GITHUB_SHA::7}\`"
+            echo "- Кэш воркера: \`nebula-app-${{ needs.build.outputs.version }}-${GITHUB_SHA::7}\`"
           } >> "$GITHUB_STEP_SUMMARY"
