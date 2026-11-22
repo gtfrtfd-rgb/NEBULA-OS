@@ -1,6 +1,6 @@
 # NEBULA OS 1.0.1 «Пульсар» · сборка 2026.11.22
 
-[![Deploy](https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/deploy.yml)
+[![Deploy](https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml/badge.svg)](https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml)
 
 Веб-операционная система на чистом JavaScript: оконный менеджер, файловая система
 на IndexedDB, терминал, генеративная музыка на Web Audio, графический редактор,
@@ -19,7 +19,7 @@
 
 1. Запушьте проект в репозиторий GitHub.
 2. **Settings → Pages → Build and deployment → Source: `GitHub Actions`.**
-3. Пуш в `main` — вкладка **Actions** покажетjob «Deploy NEBULA OS → GitHub Pages».
+3. Пуш в `main` — вкладка **Actions** покажет job «Deploy NEBULA OS → GitHub Pages».
 4. Готовый адрес: `https://<пользователь>.github.io/<репозиторий>/`
    (он же выводится в итог job и в окружение `github-pages`).
 
