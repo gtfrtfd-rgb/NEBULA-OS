@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>404 — сектор не найден · NEBULA OS</title>
+<meta name="theme-color" content="#05060f">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+    background:radial-gradient(ellipse at 30% 25%,#1a1140 0%,#0a0a1e 55%,#05060f 100%);
+    color:#eef0ff;font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;text-align:center}
+  .card{max-width:420px}
+  .mark{width:88px;height:88px;margin:0 auto 22px;color:#9d8fff;filter:drop-shadow(0 0 26px rgba(124,107,255,.55))}
+  .code{font-family:'Unbounded',sans-serif;font-size:56px;font-weight:700;letter-spacing:6px;line-height:1;
+    background:linear-gradient(90deg,#9d8fff,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h1{font-size:17px;font-weight:800;margin:14px 0 8px}
+  p{font-size:13.5px;line-height:1.7;color:#a6abd4}
+  a{display:inline-flex;align-items:center;gap:9px;margin-top:24px;height:46px;padding:0 28px;border-radius:23px;
+    background:linear-gradient(135deg,#7c6bff,#ff4fa3);color:#fff;font-size:14px;font-weight:800;text-decoration:none;
+    box-shadow:0 10px 34px rgba(124,107,255,.45);transition:transform .16s}
+  a:hover{transform:scale(1.05)}
+  .hint{margin-top:18px;font-size:11.5px;color:#7076a3}
+</style>
+</head>
+<body>
+  <div class="card">
+    <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+      <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
+      <path d="M20.5 12a8.5 8.5 0 1 1-8.5-8.5" stroke="#22d3ee"/>
+      <path d="M12 6.5A5.5 5.5 0 1 1 6.5 12" stroke="#ff4fa3"/>
+      <circle cx="4.5" cy="4.5" r=".6" fill="#ffb454" stroke="none"/>
+    </svg>
+    <div class="code">404</div>
+    <h1>Сектор не найден</h1>
+    <p>Такого адреса в этой галактике нет. NEBULA OS живёт на одной странице — вернитесь на рабочий стол.</p>
+    <a id="home" href="./">← На рабочий стол</a>
+    <div class="hint">NEBULA OS 1.0.1 «Пульсар»</div>
+  </div>
+<script>
+  /* работает и в корне пользователя, и в подпапке проекта */
+  (function(){
+    var parts=location.pathname.split('/').filter(Boolean);
+    var base=parts.length>1?'/'+parts[0]+'/':'/';
+    document.getElementById('home').href=base;
+  })();
+</script>
+</body>
+</html>

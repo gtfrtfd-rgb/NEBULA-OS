@@ -1,0 +1,15 @@
+# артефакты сборки Pages
+_site/
+.pages/
+
+# зависимости (проект без них, но на всякий случай)
+node_modules/
+package-lock.json
+
+# редакторы и ОС
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

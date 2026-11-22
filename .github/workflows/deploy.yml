@@ -1,0 +1,100 @@
+name: Deploy NEBULA OS → GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: Проверка и сборка
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Проверка графа ES-модулей и путей
+        run: node scripts/check-modules.mjs
+
+      - name: Синтаксис всех модулей
+        run: |
+          set -euo pipefail
+          printf '{"type":"module"}\n' > package.json
+          find js -name '*.js' -print0 | xargs -0 -n1 node --check
+          rm -f package.json
+          node --check sw.js
+          echo "Синтаксис OK"
+
+      - name: Проверка manifest.webmanifest
+        run: |
+          node -e "const m=JSON.parse(require('node:fs').readFileSync('manifest.webmanifest','utf8'));if(!m.name||!m.start_url||!m.icons?.length)throw new Error('manifest неполный');console.log('manifest OK:',m.name)"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Сборка статического сайта
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp index.html 404.html manifest.webmanifest sw.js _site/
+          cp -R css js icons _site/
+          touch _site/.nojekyll
+
+          SHORT="${GITHUB_SHA::7}"
+          STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # версия кэша service worker = коммит, иначе браузер держит старую сборку
+          sed -i "s/__BUILD_ID__/${SHORT}/g" _site/sw.js
+          # метка сборки для отладки на живом сайте
+          sed -i "s|</head>|<meta name=\"nebula-build\" content=\"${SHORT} · ${STAMP}\"></head>|" _site/index.html
+
+          find _site -name '*.map' -delete
+          echo "Собрано файлов: $(find _site -type f | wc -l)"
+          du -sh _site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Публикация
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Итог
+        run: |
+          {
+            echo "### 🛸 NEBULA OS опубликована"
+            echo ""
+            echo "- Адрес: ${{ steps.deployment.outputs.page_url }}"
+            echo "- Коммит: \`${GITHUB_SHA::7}\`"
+            echo "- Сборка: 1.0.1 «Пульсар»"
+          } >> "$GITHUB_STEP_SUMMARY"
