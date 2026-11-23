@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.ver.outputs.version }}
+      build: ${{ steps.ver.outputs.build }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,20 +51,29 @@ jobs:
         run: |
           node -e "const m=JSON.parse(require('node:fs').readFileSync('manifest.webmanifest','utf8'));if(!m.name||!m.start_url||!m.icons?.length)throw new Error('manifest неполный');console.log('manifest OK:',m.name)"
 
-      - name: Версия едина во всех источниках
+      - name: Версия и сборка едины во всех источниках
         id: ver
         run: |
           set -euo pipefail
           V=$(grep -oP "export const VERSION='\K[^']+" js/core/version.js)
+          B=$(grep -oP "export const BUILD='\K[^']+" js/core/version.js)
+          C=$(grep -oP "export const CODENAME='\K[^']+" js/core/version.js)
           S=$(grep -oP "const VERSION = '\K[^']+" sw.js)
-          echo "version.js=$V  sw.js=$S"
-          [ "$V" = "$S" ] || { echo "::error::VERSION в sw.js не совпадает с version.js"; exit 1; }
-          grep -q "NEBULA OS $V" index.html || { echo "::error::title в index.html не совпадает с версией"; exit 1; }
-          grep -q "OS · $V" index.html || { echo "::error::boot-sub в index.html не совпадает с версией"; exit 1; }
-          grep -q "NEBULA OS $V" 404.html || { echo "::error::404.html не совпадает с версией"; exit 1; }
-          grep -q "версия-$V-" README.md || { echo "::error::бейдж версии в README не совпадает"; exit 1; }
+          echo "version.js: $V «$C» · сборка $B"
+          echo "sw.js:      $S"
+          fail(){ echo "::error::$1"; exit 1; }
+          [ "$V" = "$S" ] || fail "VERSION в sw.js не совпадает с version.js"
+          grep -q "NEBULA OS $V" index.html      || fail "title в index.html не совпадает с версией"
+          grep -q "OS · $V" index.html           || fail "boot-sub в index.html не совпадает с версией"
+          grep -q "NEBULA OS $V" 404.html        || fail "404.html не совпадает с версией"
+          grep -q "$V «$C»" docs/banner.svg      || fail "баннер не совпадает с версией"
+          grep -q "версия-$V-" README.md         || fail "бейдж версии в README не совпадает"
+          grep -q "сборка-$B-" README.md         || fail "бейдж сборки в README не совпадает"
+          grep -q "nebula-app-$V-" README.md     || fail "имя кэша в README не совпадает с версией"
+          grep -q "### $V «$C» · $B" README.md   || fail "в README нет записи истории для $V «$C» · $B"
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          echo "Версия $V согласована во всех файлах"
+          echo "build=$B" >> "$GITHUB_OUTPUT"
+          echo "Версия $V «$C» · сборка $B согласована во всех файлах"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -120,6 +130,7 @@ jobs:
             echo "### 🛸 NEBULA OS ${{ needs.build.outputs.version }} опубликована"
             echo ""
             echo "- Адрес: ${{ steps.deployment.outputs.page_url }}"
+            echo "- Сборка: \`${{ needs.build.outputs.build }}\`"
             echo "- Коммит: \`${GITHUB_SHA::7}\`"
             echo "- Кэш воркера: \`nebula-app-${{ needs.build.outputs.version }}-${GITHUB_SHA::7}\`"
           } >> "$GITHUB_STEP_SUMMARY"
