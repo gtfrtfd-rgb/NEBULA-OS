@@ -21,5 +21,27 @@
 .tf-pal{ display:flex; gap:5px; margin-top:8px; }
 .tf-pal i{ width:15px; height:15px; border-radius:4px; display:block; box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
 
-.term-suggest{ color:#ffb454; }
+/* подсказка «возможно, вы имели в виду» — кликабельная */
+.term-suggest{ color:#ffb454; padding:1px 0 3px; line-height:2; }
+.ts-cmd{
+  font:inherit; font-weight:700; line-height:1.5;
+  color:#04121a; background:linear-gradient(135deg,#22d3ee,#7ee7f5);
+  border:0; border-radius:6px; padding:1px 9px; margin:0 1px;
+  cursor:pointer; vertical-align:baseline;
+  box-shadow:0 2px 8px rgba(34,211,238,.35);
+  transition:filter .12s,transform .12s,box-shadow .12s;
+}
+.ts-cmd:hover{ filter:brightness(1.12); transform:translateY(-1px); box-shadow:0 4px 14px rgba(34,211,238,.5); }
+.ts-cmd:active{ transform:scale(.95); }
+.ts-cmd:focus-visible{ outline:2px solid #9d8fff; outline-offset:2px; }
+
 .term-tree-sum{ color:#6b7099; margin-top:2px; }
+
+@media (max-width:720px){
+  .th-row{ grid-template-columns:18ch 1fr; column-gap:10px; }
+  .term-fetch{ gap:14px; }
+  .tf-info{ min-width:0; flex:1 1 190px; }
+  .tf-row{ grid-template-columns:10ch 1fr; gap:8px; }
+  .ts-cmd{ padding:3px 11px; }
+  .term-suggest{ line-height:2.2; }
+}

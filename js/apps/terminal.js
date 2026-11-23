@@ -53,20 +53,48 @@ const HELP_GROUPS=[
   ]],
 ];
 
-function lev(a,b){
+/* Расстояние Дамерау — Левенштейна: перестановка соседних букв стоит 1,
+   поэтому «sl» → ls, «dc» → cd, «cta» → cat находятся как опечатки. */
+function osa(a,b){
   const m=a.length,n=b.length;
-  if(!m)return n;if(!n)return m;
-  let prev=Array.from({length:n+1},(_,i)=>i);
-  for(let i=1;i<=m;i++){const cur=[i];
-    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
-    prev=cur;}
-  return prev[n];
+  if(!m)return n;
+  if(!n)return m;
+  const d=[];
+  for(let i=0;i<=m;i++)d[i]=[i];
+  for(let j=0;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      const cost=a[i-1]===b[j-1]?0:1;
+      d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+cost);
+      if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1);
+    }
+  }
+  return d[m][n];
 }
-function suggest(cmd){
-  if(cmd.length<2)return null;
-  let best=null,bd=3;
-  for(const k of CMDS){const d=lev(cmd,k);if(d<bd){bd=d;best=k;}}
-  return bd<=2?best:null;
+
+/* Порядок подсказок: сначала то, что начинается с набранного, потом подстрока,
+   потом просто похожие буквы. Внутри группы — по числу опечаток и длине.
+   Именно поэтому «ca» даёт cat, а не cd. */
+function suggest(input){
+  const q=String(input||'').toLowerCase();
+  if(!q)return [];
+  const limit=q.length<=2?1:q.length<=4?2:3;
+  const list=[];
+  for(const cmd of CMDS){
+    const c=cmd.toLowerCase();
+    if(c===q)continue;
+    const prefix=c.startsWith(q);
+    const sub=!prefix&&c.includes(q);
+    const d=osa(q,c);
+    if(prefix){if(d>limit+2)continue;}
+    else if(sub){if(d>limit+2)continue;}
+    else if(d>limit)continue;
+    list.push({cmd,rank:prefix?0:sub?1:2,d,len:c.length});
+  }
+  if(!list.length)return [];
+  list.sort((a,b)=>a.rank-b.rank||a.d-b.d||a.len-b.len||a.cmd.localeCompare(b.cmd));
+  const top=list[0];
+  return list.filter(x=>x.rank===top.rank&&x.d===top.d).slice(0,3).map(x=>x.cmd);
 }
 
 export default {name:'Терминал',icon:'terminal',g:['#232849','#4a5382'],w:680,h:460,minW:420,minH:260,
@@ -82,11 +110,27 @@ mount(body,win){
   const echoCmd=c=>print(promptHtml()+esc(c));
   const ok=t=>print(esc(t),'ok'),err=t=>print(esc(t),'err'),info=t=>print(esc(t),'info'),dim=t=>print(esc(t),'dim');
   function resolve(p){return joinPath(cwd,p||'.');}
+  function putInput(text){
+    inp.value=text;
+    inp.focus();
+    const n=inp.value.length;
+    inp.setSelectionRange(n,n);
+    hi=hist.length;
+    Audio.sfx('tick');
+  }
 
   print(`<span class="acc">NEBULA Shell 1.0</span> <span class="dim">— оболочка Звёздного Совета</span>`);
   print(`<span class="dim">Введите</span> <span class="info">help</span><span class="dim">, чтобы увидеть команды.</span>`);
   print(`<span class="dim">Tab — автодополнение · ↑↓ — история · Ctrl+L — очистить · Ctrl+C — сброс строки</span>`);
   print('');
+
+  /* подсказку можно нажать — она подставится в строку ввода */
+  out.addEventListener('click',e=>{
+    const b=e.target.closest('.ts-cmd');
+    if(!b)return;
+    e.preventDefault();
+    putInput(b.dataset.cmd+' ');
+  });
 
   function printHelp(){
     let html='<div class="term-help"><div class="th-title">NEBULA Shell — команды</div><div class="th-hint">Клик по строке не выполняет команду — наберите её и нажмите Enter.</div>';
@@ -228,11 +272,17 @@ mount(body,win){
       case'about':info(`${OS_NAME} — сборка ${BUILD}. Vanilla JS · Canvas 2D · Web Audio · IndexedDB.`);break;
       case'reboot':print('Перезагрузка…','warn');setTimeout(()=>bus.emit('power','restart'),400);break;
       case'exit':WM.close(win);break;
-      default:{err(`команда не найдена: ${cmd}`);
+      default:{
+        err(`команда не найдена: ${cmd}`);
         const s=suggest(cmd);
-        if(s)print(`возможно, вы имели в виду <span class="info">${esc(s)}</span>? <span class="dim">или введите help</span>`,'term-suggest');
-        else dim('введите help, чтобы увидеть список команд');
-        Audio.sfx('error');}
+        if(s.length){
+          const chips=s.map(c=>`<button class="ts-cmd" data-cmd="${esc(c)}" title="Подставить «${esc(c)}» в строку ввода">${esc(c)}</button>`).join('<span class="dim"> · </span>');
+          print(`<span class="warn">возможно, вы имели в виду</span> ${chips} <span class="dim">— нажмите, чтобы подставить</span>`,'term-suggest');
+        }else{
+          dim('введите help, чтобы увидеть список команд');
+        }
+        Audio.sfx('error');
+      }
     }}catch(e){err('ошибка: '+e.message);}
     out.scrollTop=out.scrollHeight;
   }
