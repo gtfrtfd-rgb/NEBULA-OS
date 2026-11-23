@@ -74,22 +74,22 @@ body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) backw
 /* меню Пуск */
 #startMenu{ position:fixed; left:calc(10px + var(--sa-l)); bottom:calc(var(--work-bottom) + 8px); width:560px; max-width:calc(100vw - 20px - var(--sa-l) - var(--sa-r)); max-height:calc(100dvh - var(--work-bottom) - var(--sa-t) - 30px); z-index:9500; display:flex; flex-direction:column; background:var(--surface); backdrop-filter:blur(26px) saturate(1.6); -webkit-backdrop-filter:blur(26px) saturate(1.6); border:1px solid var(--border2); border-radius:20px; box-shadow:var(--shadow); padding:16px; opacity:0; visibility:hidden; transform:translateY(16px) scale(.98); transform-origin:bottom left; transition:.22s cubic-bezier(.2,.9,.3,1.1); }
 #startMenu.open{ opacity:1; visibility:visible; transform:none; }
-.sm-head{ display:flex; align-items:center; gap:11px; margin-bottom:13px; }
+.sm-head{ display:flex; align-items:center; gap:11px; margin-bottom:13px; flex:none; }
 .avatar{ width:42px; height:42px; border-radius:50%; background:conic-gradient(from 200deg,var(--acc),var(--acc2),var(--mag),var(--amber),var(--acc)); padding:2.5px; flex:none; }
 .avatar>div{ width:100%; height:100%; border-radius:50%; background:var(--solid2); display:flex; align-items:center; justify-content:center; font-size:21px; }
 .sm-user{ flex:1; min-width:0; }
 .sm-user b{ font-size:14.5px; display:block; }
 .sm-user span{ font-size:11px; color:var(--faint); font-weight:600; }
-.sm-search{ display:flex; align-items:center; gap:9px; height:42px; padding:0 14px; border-radius:12px; background:var(--surface2); border:1px solid var(--border); margin-bottom:12px; color:var(--faint); }
+.sm-search{ display:flex; align-items:center; gap:9px; height:42px; flex:none; padding:0 14px; border-radius:12px; background:var(--surface2); border:1px solid var(--border); margin-bottom:12px; color:var(--faint); }
 .sm-search:focus-within{ border-color:var(--acc-35); box-shadow:0 0 0 3px var(--acc-12); }
-.sm-search input{ flex:1; background:none; border:0; outline:0; font-size:13.5px; color:var(--text); }
+.sm-search input{ flex:1; min-width:0; background:none; border:0; outline:0; font-size:13.5px; color:var(--text); }
 .sm-search input::placeholder{ color:var(--faint); }
 #smBody{ flex:1; overflow-y:auto; min-height:0; padding-right:4px; }
 .sm-label{ font-size:10.5px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--faint); margin:10px 4px 8px; }
 .sm-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
 .sm-tile{ display:flex; flex-direction:column; align-items:center; gap:7px; padding:11px 4px 9px; border-radius:13px; transition:background .13s,transform .13s; }
 .sm-tile:hover,.sm-tile.kbd{ background:var(--surface2); transform:translateY(-2px); }
-.sm-tile .tile{ width:50px; height:50px; border-radius:14px; }
+.sm-tile .tile{ width:50px; height:50px; border-radius:14px; flex:none; }
 .sm-tile span{ font-size:11.5px; font-weight:600; color:var(--dim); text-align:center; line-height:1.2; }
 .sm-file{ display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border-radius:11px; text-align:left; transition:background .13s; }
 .sm-file:hover,.sm-file.kbd{ background:var(--surface2); }
@@ -99,7 +99,7 @@ body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) backw
 .sm-file .ft span{ font-size:10.5px; color:var(--faint); }
 .sm-file time{ font-size:10.5px; color:var(--faint); flex:none; }
 .sm-empty{ padding:26px 10px; text-align:center; color:var(--faint); font-size:12.5px; }
-.sm-foot{ display:flex; align-items:center; gap:6px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.sm-foot{ display:flex; align-items:center; gap:6px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); flex:none; }
 .sm-foot .spacer{ flex:1; }
 .pw-btn{ display:flex; align-items:center; gap:7px; padding:8px 12px; border-radius:10px; font-size:12px; font-weight:700; color:var(--dim); transition:background .13s,color .13s; }
 .pw-btn:hover{ background:var(--surface2); color:var(--text); }
@@ -161,7 +161,7 @@ body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) backw
 .toast.warn .t-bar{ background:var(--amber); } .toast.error .t-bar{ background:var(--red); }
 
 /* контекстное меню */
-#contextMenu{ position:fixed; z-index:9700; min-width:210px; background:var(--solid); border:1px solid var(--border2); border-radius:13px; box-shadow:var(--shadow); padding:5px; display:none; animation:ctxIn .13s ease; }
+#contextMenu{ position:fixed; z-index:9700; min-width:210px; max-width:calc(100vw - 12px); background:var(--solid); border:1px solid var(--border2); border-radius:13px; box-shadow:var(--shadow); padding:5px; display:none; animation:ctxIn .13s ease; }
 #contextMenu.open{ display:block; }
 @keyframes ctxIn{ from{ opacity:0; transform:scale(.95);} to{ opacity:1; transform:none;} }
 .ctx-item{ display:flex; align-items:center; gap:10px; width:100%; padding:8px 11px; border-radius:9px; font-size:12.5px; font-weight:600; color:var(--dim); text-align:left; }
@@ -184,42 +184,48 @@ body.entered #taskbar{ animation:tbIn .55s .15s cubic-bezier(.2,.9,.3,1.1) backw
 .dialog input:focus{ border-color:var(--acc); box-shadow:0 0 0 3px var(--acc-12); }
 .dlg-actions{ display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:18px; }
 
-/* экраны загрузки / блокировки / выключения */
+/* экраны загрузки / блокировки / выключения.
+   Все дети — flex:none: колонка не имеет права сплющивать аватар и кнопки. */
 .fullscreen{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-#bootScreen{ z-index:10000; background:#05060f; gap:0; transition:opacity .5s ease; padding:var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
+.fullscreen>*{ flex:none; }
+
+#bootScreen{ z-index:10000; background:#05060f; gap:0; overflow-y:auto; transition:opacity .5s ease; padding:calc(var(--sa-t) + 10px) calc(var(--sa-r) + 12px) calc(var(--sa-b) + 10px) calc(var(--sa-l) + 12px); }
 #bootScreen.hide{ opacity:0; pointer-events:none; }
-.boot-logo{ width:96px; height:96px; color:#9d8fff; filter:drop-shadow(0 0 26px rgba(124,107,255,.6)); }
+.boot-logo{ width:96px; height:96px; flex:none; color:#9d8fff; filter:drop-shadow(0 0 26px rgba(124,107,255,.6)); }
 .boot-logo .orbit{ animation:spin 7s linear infinite; transform-origin:center; }
 .boot-logo .orbit2{ animation:spin 11s linear infinite reverse; transform-origin:center; }
-.boot-word{ font-family:var(--f-d); font-size:30px; font-weight:700; letter-spacing:9px; margin:22px 0 3px; color:#eef0ff; text-indent:9px; }
-.boot-sub{ font-size:11px; font-weight:700; letter-spacing:3.5px; color:#7076a3; text-transform:uppercase; margin-bottom:30px; }
-.boot-track{ width:290px; max-width:76vw; height:4px; border-radius:2px; background:rgba(151,161,255,.15); overflow:hidden; }
+.boot-word{ font-family:var(--f-d); font-size:30px; font-weight:700; letter-spacing:9px; margin:22px 0 3px; color:#eef0ff; text-indent:9px; flex:none; }
+.boot-sub{ font-size:11px; font-weight:700; letter-spacing:3.5px; color:#7076a3; text-transform:uppercase; margin-bottom:30px; text-align:center; flex:none; }
+.boot-track{ width:290px; max-width:76vw; height:4px; flex:none; border-radius:2px; background:rgba(151,161,255,.15); overflow:hidden; }
 #bootBar{ height:100%; width:0%; border-radius:2px; background:linear-gradient(90deg,#7c6bff,#22d3ee,#34e0a1); box-shadow:0 0 14px rgba(124,107,255,.8); transition:width .25s ease; }
-#bootLog{ width:320px; max-width:86vw; height:118px; overflow:hidden; margin-top:24px; font-family:var(--f-m); font-size:10.5px; line-height:1.85; color:#5b6090; }
+#bootLog{ width:320px; max-width:86vw; height:118px; flex:none; overflow:hidden; margin-top:24px; font-family:var(--f-m); font-size:10.5px; line-height:1.85; color:#5b6090; }
 #bootLog div{ animation:fadeUp .3s ease; } #bootLog .ok{ color:#34e0a1; }
-#bootSkip{ position:absolute; bottom:calc(28px + var(--sa-b)); font-size:11.5px; font-weight:700; color:#5b6090; padding:9px 18px; border-radius:999px; border:1px solid rgba(151,161,255,.18); }
+/* в потоке, а не absolute — больше никогда не наедет на лог */
+#bootSkip{ flex:none; margin-top:18px; font-size:11.5px; font-weight:700; color:#5b6090; padding:9px 18px; border-radius:999px; border:1px solid rgba(151,161,255,.18); }
 #bootSkip:hover{ color:#a6abd4; border-color:rgba(151,161,255,.4); }
-#lockScreen{ z-index:9900; background:rgba(5,6,15,.45); backdrop-filter:blur(30px) saturate(1.3); -webkit-backdrop-filter:blur(30px) saturate(1.3); display:none; padding:calc(var(--sa-t) + 12px) calc(var(--sa-r) + 12px) calc(var(--sa-b) + 12px) calc(var(--sa-l) + 12px); }
+
+#lockScreen{ z-index:9900; background:rgba(5,6,15,.45); backdrop-filter:blur(30px) saturate(1.3); -webkit-backdrop-filter:blur(30px) saturate(1.3); display:none; overflow-y:auto; padding:calc(var(--sa-t) + 12px) calc(var(--sa-r) + 12px) calc(var(--sa-b) + 12px) calc(var(--sa-l) + 12px); }
 #lockScreen.on{ display:flex; }
-#lockTime{ font-family:var(--f-d); font-weight:300; font-size:84px; color:#fff; letter-spacing:3px; text-shadow:0 0 50px rgba(124,107,255,.5); line-height:1; }
-#lockDate{ font-size:15px; font-weight:600; color:#cfd3ff; margin:10px 0 44px; text-transform:capitalize; text-align:center; }
-.lock-avatar{ width:92px; height:92px; border-radius:50%; background:conic-gradient(from 200deg,#7c6bff,#22d3ee,#ff4fa3,#ffb454,#7c6bff); padding:3.5px; animation:spin 9s linear infinite; }
+#lockTime{ font-family:var(--f-d); font-weight:300; font-size:84px; color:#fff; letter-spacing:3px; text-shadow:0 0 50px rgba(124,107,255,.5); line-height:1; flex:none; }
+#lockDate{ font-size:15px; font-weight:600; color:#cfd3ff; margin:10px 0 44px; text-transform:capitalize; text-align:center; flex:none; }
+.lock-avatar{ width:92px; height:92px; min-width:92px; min-height:92px; flex:none; border-radius:50%; background:conic-gradient(from 200deg,#7c6bff,#22d3ee,#ff4fa3,#ffb454,#7c6bff); padding:3.5px; animation:spin 9s linear infinite; }
 .lock-avatar>div{ width:100%; height:100%; border-radius:50%; background:#141631; display:flex; align-items:center; justify-content:center; font-size:44px; animation:spin 9s linear infinite reverse; }
-#lockName{ font-size:18px; font-weight:800; color:#fff; margin:15px 0 20px; }
-#loginBtn{ height:46px; padding:0 34px; border-radius:23px; background:linear-gradient(135deg,#7c6bff,#ff4fa3); color:#fff; font-size:14px; font-weight:800; display:flex; align-items:center; gap:9px; box-shadow:0 10px 34px rgba(124,107,255,.45); transition:transform .16s,box-shadow .16s; }
+#lockName{ font-size:18px; font-weight:800; color:#fff; margin:15px 0 20px; flex:none; }
+#loginBtn{ height:46px; flex:none; padding:0 34px; border-radius:23px; background:linear-gradient(135deg,#7c6bff,#ff4fa3); color:#fff; font-size:14px; font-weight:800; display:flex; align-items:center; gap:9px; box-shadow:0 10px 34px rgba(124,107,255,.45); transition:transform .16s,box-shadow .16s; }
 #loginBtn:hover{ transform:scale(1.05); box-shadow:0 14px 44px rgba(124,107,255,.6); }
-.lock-hint{ font-size:11.5px; color:#8a90c0; margin-top:15px; font-weight:600; text-align:center; }
+.lock-hint{ font-size:11.5px; color:#8a90c0; margin-top:15px; font-weight:600; text-align:center; flex:none; }
 .lock-fs{ position:absolute; bottom:calc(26px + var(--sa-b)); left:calc(28px + var(--sa-l)); width:44px; height:44px; border-radius:50%; background:rgba(20,22,49,.6); border:1px solid rgba(151,161,255,.22); color:#a6abd4; display:flex; align-items:center; justify-content:center; transition:color .15s,border-color .15s,background .15s; }
 .lock-fs:hover{ color:#fff; border-color:rgba(151,161,255,.5); }
 .lock-fs.on{ color:#0b0d1f; background:linear-gradient(135deg,#7c6bff,#22d3ee); border-color:transparent; box-shadow:0 6px 22px rgba(124,107,255,.5); }
 .lock-power{ position:absolute; bottom:calc(26px + var(--sa-b)); right:calc(28px + var(--sa-r)); display:flex; gap:9px; }
-.lock-power button{ width:44px; height:44px; border-radius:50%; background:rgba(20,22,49,.6); border:1px solid rgba(151,161,255,.22); color:#a6abd4; display:flex; align-items:center; justify-content:center; }
+.lock-power button{ width:44px; height:44px; flex:none; border-radius:50%; background:rgba(20,22,49,.6); border:1px solid rgba(151,161,255,.22); color:#a6abd4; display:flex; align-items:center; justify-content:center; }
 .lock-power button:hover{ color:#fff; border-color:rgba(151,161,255,.5); }
+
 #shutdownScreen{ z-index:10000; background:#020308; display:none; padding:var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
 #shutdownScreen.on{ display:flex; }
-#powerOn{ width:86px; height:86px; border-radius:50%; border:2px solid rgba(151,161,255,.3); color:#9d8fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 40px rgba(124,107,255,.25), inset 0 0 24px rgba(124,107,255,.12); transition:transform .2s,box-shadow .2s; }
+#powerOn{ width:86px; height:86px; flex:none; border-radius:50%; border:2px solid rgba(151,161,255,.3); color:#9d8fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 40px rgba(124,107,255,.25), inset 0 0 24px rgba(124,107,255,.12); transition:transform .2s,box-shadow .2s; }
 #powerOn:hover{ transform:scale(1.08); box-shadow:0 0 70px rgba(124,107,255,.5), inset 0 0 30px rgba(124,107,255,.25); }
-.sd-text{ margin-top:22px; font-size:12px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#5b6090; }
+.sd-text{ margin-top:22px; font-size:12px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#5b6090; flex:none; }
 
 /* компактный режим там, где Fullscreen API недоступен */
 html.pseudo-fs #taskbar{ left:calc(4px + var(--sa-l)); right:calc(4px + var(--sa-r)); bottom:calc(4px + var(--sa-b)); border-radius:14px; }
@@ -249,4 +255,41 @@ html.standalone #trayFs{ display:none; }
   #trayClock{ padding:0 6px; }
   .tray-btn{ padding:0 6px; }
   #startBtn{ width:42px; height:42px; }
+}
+
+/* низкий экран = телефон в горизонтали: всё уменьшается, но ничего не сжимается */
+@media (max-height:620px){
+  .boot-logo{ width:60px; height:60px; }
+  .boot-word{ font-size:22px; letter-spacing:6px; text-indent:6px; margin:12px 0 2px; }
+  .boot-sub{ font-size:9.5px; letter-spacing:2.4px; margin-bottom:16px; }
+  .boot-track{ width:240px; }
+  #bootLog{ height:64px; margin-top:12px; font-size:9.5px; line-height:1.7; }
+  #bootSkip{ margin-top:12px; padding:7px 15px; font-size:11px; }
+  #lockTime{ font-size:50px; letter-spacing:2px; }
+  #lockDate{ font-size:12.5px; margin:6px 0 16px; }
+  .lock-avatar{ width:62px; height:62px; min-width:62px; min-height:62px; padding:3px; }
+  .lock-avatar>div{ font-size:29px; }
+  #lockName{ font-size:15px; margin:9px 0 13px; }
+  #loginBtn{ height:42px; padding:0 26px; font-size:13px; }
+  .lock-hint{ font-size:10.5px; margin-top:9px; }
+  .lock-fs,.lock-power button{ width:40px; height:40px; }
+  .lock-fs{ bottom:calc(12px + var(--sa-b)); left:calc(14px + var(--sa-l)); }
+  .lock-power{ bottom:calc(12px + var(--sa-b)); right:calc(14px + var(--sa-r)); gap:7px; }
+  #powerOn{ width:66px; height:66px; }
+  .sd-text{ margin-top:14px; font-size:11px; }
+}
+@media (max-height:430px){
+  #bootScreen{ justify-content:flex-start; }
+  .boot-logo{ width:46px; height:46px; }
+  .boot-word{ font-size:18px; margin:8px 0 2px; }
+  .boot-sub{ margin-bottom:10px; }
+  #bootLog{ height:48px; margin-top:9px; }
+  #bootSkip{ margin-top:9px; }
+  #lockTime{ font-size:38px; }
+  #lockDate{ margin:4px 0 10px; }
+  .lock-avatar{ width:50px; height:50px; min-width:50px; min-height:50px; }
+  .lock-avatar>div{ font-size:23px; }
+  #lockName{ margin:7px 0 10px; font-size:14px; }
+  #loginBtn{ height:38px; font-size:12.5px; }
+  .lock-hint{ display:none; }
 }
