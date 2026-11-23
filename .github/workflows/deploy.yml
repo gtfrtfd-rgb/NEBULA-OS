@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Проверка графа ES-модулей и путей
+      - name: Проверка графа ES-модулей, ресурсов и README
         run: node scripts/check-modules.mjs
 
       - name: Синтаксис всех модулей
@@ -63,14 +63,16 @@ jobs:
           echo "sw.js:      $S"
           fail(){ echo "::error::$1"; exit 1; }
           [ "$V" = "$S" ] || fail "VERSION в sw.js не совпадает с version.js"
-          grep -q "NEBULA OS $V" index.html      || fail "title в index.html не совпадает с версией"
-          grep -q "OS · $V" index.html           || fail "boot-sub в index.html не совпадает с версией"
-          grep -q "NEBULA OS $V" 404.html        || fail "404.html не совпадает с версией"
-          grep -q "$V «$C»" docs/banner.svg      || fail "баннер не совпадает с версией"
-          grep -q "версия-$V-" README.md         || fail "бейдж версии в README не совпадает"
-          grep -q "сборка-$B-" README.md         || fail "бейдж сборки в README не совпадает"
-          grep -q "nebula-app-$V-" README.md     || fail "имя кэша в README не совпадает с версией"
-          grep -q "### $V «$C» · $B" README.md   || fail "в README нет записи истории для $V «$C» · $B"
+          grep -q "NEBULA OS $V" index.html            || fail "title в index.html не совпадает с версией"
+          grep -q "OS · $V" index.html                 || fail "boot-sub в index.html не совпадает с версией"
+          grep -q "NEBULA OS $V" 404.html              || fail "404.html не совпадает с версией"
+          grep -q "$V «$C»" docs/banner.svg            || fail "баннер не совпадает с версией"
+          grep -q "$V «$C»" docs/badge-version.svg     || fail "бейдж версии не совпадает с версией"
+          grep -q "$B" docs/badge-build.svg            || fail "бейдж сборки не совпадает с датой сборки"
+          grep -q "docs/badge-version.svg" README.md   || fail "README не ссылается на бейдж версии"
+          grep -q "docs/badge-build.svg" README.md     || fail "README не ссылается на бейдж сборки"
+          grep -q "nebula-app-$V-" README.md           || fail "имя кэша в README не совпадает с версией"
+          grep -q "### $V «$C» · $B" README.md         || fail "в README нет записи истории для $V «$C» · $B"
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "build=$B" >> "$GITHUB_OUTPUT"
           echo "Версия $V «$C» · сборка $B согласована во всех файлах"

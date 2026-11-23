@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml"><img src="https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
-  <img src="https://img.shields.io/badge/версия-1.0.3-7c6bff?style=flat" alt="Версия 1.0.3">
-  <img src="https://img.shields.io/badge/сборка-2026.11.23-22d3ee?style=flat" alt="Сборка 2026.11.23">
-  <img src="https://img.shields.io/badge/зависимости-0-34e0a1?style=flat" alt="Ноль зависимостей">
-  <a href="https://github.com/gtfrtfd-rgb/NEBULA-OS/deployments"><img src="https://img.shields.io/github/deployments/gtfrtfd-rgb/NEBULA-OS/github-pages?label=pages&color=ff4fa3" alt="Pages"></a>
-  <img src="https://img.shields.io/github/last-commit/gtfrtfd-rgb/NEBULA-OS?color=4f8dff&label=коммит" alt="Последний коммит">
+  <a href="https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml"><img src="https://github.com/gtfrtfd-rgb/NEBULA-OS/actions/workflows/deploy.yml/badge.svg" alt="Deploy" height="20"></a>
+  <img src="docs/badge-version.svg" alt="Версия 1.0.3 «Пульсар»" height="20">
+  <img src="docs/badge-build.svg" alt="Сборка 2026.11.23" height="20">
+  <img src="docs/badge-deps.svg" alt="Ноль зависимостей" height="20">
+  <a href="https://github.com/gtfrtfd-rgb/NEBULA-OS/deployments"><img src="https://img.shields.io/github/deployments/gtfrtfd-rgb/NEBULA-OS/github-pages?style=flat&label=pages&color=ff4fa3" alt="Pages" height="20"></a>
+  <a href="https://github.com/gtfrtfd-rgb/NEBULA-OS/commits/main"><img src="https://img.shields.io/github/last-commit/gtfrtfd-rgb/NEBULA-OS?style=flat&color=4f8dff" alt="Последний коммит" height="20"></a>
 </p>
 
 <p align="center">
@@ -21,6 +21,8 @@
   <a href="#публикация-на-github-pages">Деплой</a>
   &nbsp;·&nbsp;
   <a href="#диагностика">Диагностика</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/gtfrtfd-rgb/NEBULA-OS/commits/main">Коммиты</a>
 </p>
 
 ---
@@ -40,6 +42,8 @@
 | **Сеть** | только шрифты Google Fonts; всё остальное локально |
 | **Офлайн** | service worker, установка на домашний экран, полный экран |
 | **Деплой** | GitHub Actions → GitHub Pages по пушу в `main` |
+
+Бейджи версии, сборки и зависимостей — собственные SVG из `docs/`, они лежат в репозитории и не зависят от сторонних сервисов. Живой статус публикации и последний коммит ведут прямо в историю репозитория.
 
 ---
 
@@ -259,9 +263,12 @@ Service worker включается **только на https** и устрое�
 
 ```
 .github/workflows/deploy.yml   автопубликация на GitHub Pages
-scripts/check-modules.mjs      проверка импортов/экспортов и ресурсов
+scripts/check-modules.mjs      проверка импортов, ресурсов и README
 docs/banner.svg                баннер README
 docs/architecture.svg          схема архитектуры
+docs/badge-version.svg         бейдж версии
+docs/badge-build.svg           бейдж сборки
+docs/badge-deps.svg            бейдж зависимостей
 index.html                     оболочка и экраны питания
 404.html                       «сектор не найден»
 manifest.webmanifest           PWA-манифест (display: fullscreen)
@@ -307,7 +314,7 @@ js/
 
 | Шаг | Ловит |
 |---|---|
-| `scripts/check-modules.mjs` | `import` в несуществующий файл, отсутствующий именованный экспорт, битые ссылки HTML, невалидный манифест, пропавшие иконки |
+| `scripts/check-modules.mjs` | `import` в несуществующий файл, отсутствующий именованный экспорт, битые ссылки HTML, невалидный манифест, пропавшие иконки, **битые картинки и якоря README** |
 | `node --check` по всем модулям | синтаксические ошибки |
 | Проверка манифеста | неполный PWA-манифест |
 | Версия и сборка едины | расхождение `version.js`, `sw.js`, `index.html`, `404.html`, баннера, бейджей и записи истории в README |
@@ -334,7 +341,7 @@ js/
 
 ## Приватность
 
-Ни аналитики, ни телеметрии, ни аккаунтов, ни серверных запросов. Файлы, настройки и рекорды не покидают браузер. Единственный внешний ресурс — шрифты Google Fonts; они кэшируются воркером, а офлайном подставляются системные.
+Ни аналитики, ни телеметрии, ни аккаунтов, ни серверных запросов. Файлы, настройки и рекорды не покидают браузер. Единственный внешний ресурс самой системы — шрифты Google Fonts; они кэшируются воркером, а офлайном подставляются системные.
 
 ---
 
@@ -349,6 +356,7 @@ js/
 | Нет полного экрана на iPhone | Safari не отдаёт его странице. Добавьте на «Домой» и запускайте с иконки |
 | Нет звука | Браузер включает аудио по жесту: нажмите «Войти в систему». Проверьте иконку звука в трее и в виджете |
 | Тормозит на слабом устройстве | Настройки → Система → Качество рендера → **Экономное** |
+| Бейдж в README не грузится |.Version и сборка — локальные SVG, они всегда на месте; статус и коммит приходят с github.com и shields.io — откройте ссылку под бейджем, она ведёт в репозиторий |
 
 Текущая сборка всегда видна внизу меню Пуск — по ней сразу понятно, обновился ли сайт.
 
@@ -370,7 +378,8 @@ js/
 - Экраны загрузки и входа получили компактную раскладку для низких экранов; все их элементы защищены от сжатия.
 - Строки настроек переносятся, а не сжимают подпись; приглашение терминала и поле ввода раскладываются на две строки на телефоне.
 - Подсказки опечаток в терминале ранжируются по префиксу и расстоянию Дамерау — Левенштейна: `ca` → **cat**, а не `cd`; подсказку можно нажать, чтобы подставить в строку.
-- CI сверяет версию и сборку ещё и с баннером, бейджами и записью истории версий.
+- Бейджи версии, сборки и зависимостей заменены собственными SVG в репозитории — не зависят от сторонних сервисов и не ломаются; ссылка на историю коммитов продублирована текстом.
+- Проверка README в CI: битые картинки и якоря навигации теперь валят сборку.
 
 ### 1.0.2
 - Убрана кнопка «Проверить обновления» — её заменяет настоящее автообновление.
@@ -392,7 +401,7 @@ js/
 
 ## Разработка
 
-Версия и сборка живут в одном месте — `js/core/version.js`. `sw.js`, `index.html`, `404.html`, баннер и README сверяются с ними в CI, расхождение валит сборку. Порядок подъёма версии: поменять `VERSION` и `BUILD`, синхронизировать `sw.js`, заголовок и строку загрузки в `index.html`, подпись в `404.html`, пилюлю в `docs/banner.svg`, бейджи и запись истории в README.
+Версия и сборка живут в одном месте — `js/core/version.js`. `sw.js`, `index.html`, `404.html`, баннер, бейджи и README сверяются с ними в CI, расхождение валит сборку. Порядок подъёма версии: поменять `VERSION` и `BUILD`, синхронизировать `sw.js`, заголовок и строку загрузки в `index.html`, подпись в `404.html`, пилюлю в `docs/banner.svg`, текст в `docs/badge-version.svg` и `docs/badge-build.svg`, запись истории в README.
 
 ```bash
 node scripts/check-modules.mjs   # та же проверка, что в CI

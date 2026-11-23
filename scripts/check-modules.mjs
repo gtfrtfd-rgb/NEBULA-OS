@@ -3,7 +3,9 @@
    - каждый import указывает на существующий файл
    - каждый именованный import реально экспортируется целью
    - локальные href/src из HTML и иконки манифеста существуют
-   Ловит ровно тот класс ошибок, из-за которого система не стартует. */
+   - картинки README на месте, якоря навигации ведут к реальным заголовкам
+   Ловит ровно тот класс ошибок, из-за которого система не стартует
+   или документация показывает битые изображения. */
 import {readFileSync, existsSync, statSync, readdirSync} from 'node:fs';
 import {join, dirname, resolve, relative} from 'node:path';
 
@@ -99,6 +101,36 @@ for (const [page, href] of htmlRefs) {
   if (!existsSync(join(ROOT, href))) errors.push(`${page}: не найден ресурс «${href}»`);
 }
 ok.push(`ссылок из HTML проверено: ${htmlRefs.length}`);
+
+/* README: локальные картинки и якоря навигации */
+const slug = (s) => s.toLowerCase().trim()
+  .replace(/[^\p{L}\p{N}\s-]/gu, '')
+  .replace(/\s+/g, '-');
+const rp = join(ROOT, 'README.md');
+if (!existsSync(rp)) errors.push('нет README.md');
+else {
+  const src = readFileSync(rp, 'utf8');
+  let imgs = 0;
+  for (const m of src.matchAll(/<img[^>]*\ssrc="([^"]+)"/g)) {
+    const s = m[1];
+    if (/^(https?:|data:)/.test(s)) continue;
+    imgs++;
+    if (!existsSync(join(ROOT, s))) errors.push(`README: не найдена картинка «${s}»`);
+  }
+  const heads = new Set();
+  for (const m of src.matchAll(/^#{1,6}\s+(.+)$/gm)) heads.add(slug(m[1]));
+  let anchors = 0;
+  for (const m of src.matchAll(/href="#([^"]+)"/g)) {
+    anchors++;
+    if (!heads.has(m[1])) errors.push(`README: якорь «#${m[1]}» не ведёт ни к одному заголовку`);
+  }
+  for (const m of src.matchAll(/\[[^\]]+\]\(([^)\s]+)\)/g)) {
+    const s = m[1];
+    if (/^(https?:|mailto:|#)/.test(s)) continue;
+    if (!existsSync(join(ROOT, s.split('#')[0]))) errors.push(`README: не найдена ссылка «${s}»`);
+  }
+  ok.push(`README: картинок ${imgs}, якорей ${anchors}, заголовков ${heads.size}`);
+}
 
 /* манифест */
 const mp = join(ROOT, 'manifest.webmanifest');
