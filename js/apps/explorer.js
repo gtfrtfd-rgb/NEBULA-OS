@@ -40,6 +40,8 @@ mount(body,win,params){
   $('.sort-sel',body).value=sort;
   const NAV=[['/','home','Обзор'],['/Документы','file','Документы'],['/Изображения','image','Изображения'],['/Музыка','music','Музыка'],['/Система','hdd','Система'],['@recent','clock','Недавние']];
 
+  const nameOf=n=>(n&&typeof n.name==='string'&&n.name.trim())?n.name:'Без имени';
+
   function thumbSrc(n){
     const key=n.id+':'+n.mtime;
     if(thumbCache.has(key))return thumbCache.get(key);
@@ -70,15 +72,15 @@ mount(body,win,params){
     let list;
     if(recent)list=recentFiles(14).map(x=>x.node);
     else{const dir=nodeAt(path);if(!dir||dir.type!=='dir'){path='/';return currentItems();}list=[...dir.children];}
-    if(query)list=list.filter(n=>n.name.toLowerCase().includes(query.toLowerCase()));
+    if(query)list=list.filter(n=>nameOf(n).toLowerCase().includes(query.toLowerCase()));
     list.sort((a,b)=>{const da=a.type==='dir'?0:1,db=b.type==='dir'?0:1;if(da!==db)return da-db;
-      let r=0;if(sort==='name')r=a.name.localeCompare(b.name,'ru');else if(sort==='mtime')r=a.mtime-b.mtime;else r=(a.type===b.type?a.name.localeCompare(b.name,'ru'):a.type.localeCompare(b.type));
+      let r=0;if(sort==='name')r=nameOf(a).localeCompare(nameOf(b),'ru');else if(sort==='mtime')r=a.mtime-b.mtime;else r=(a.type===b.type?nameOf(a).localeCompare(nameOf(b),'ru'):a.type.localeCompare(b.type));
       return asc?r:-r;});
     return list;}
   function fileIcon(n){
     if(n.type==='dir')return`<span class="fi" style="background:linear-gradient(135deg,#ffb454,#ff6a3d)">${icon('folder',22)}</span>`;
     if(n.type==='image'){const key=n.id+':'+n.mtime;
-      return`<span class="fi thumb"><img data-thumb="${key}" src="${thumbSrc(n)}" alt="${esc(n.name)}" loading="lazy" decoding="async"></span>`;}
+      return`<span class="fi thumb"><img data-thumb="${key}" src="${thumbSrc(n)}" alt="${esc(nameOf(n))}" loading="lazy" decoding="async"></span>`;}
     return`<span class="fi" style="background:linear-gradient(135deg,#4f8dff,#7c6bff)">${icon('file',20)}</span>`;}
   function render(){
     pending=false;
@@ -98,8 +100,9 @@ mount(body,win,params){
     if(!list.length){items.appendChild(el(`<div class="exp-empty"><span class="big">${query?'🔭':'🌌'}</span><b>${query?'Ничего не найдено':'Здесь пока пусто'}</b><span>${query?'Попробуйте другой запрос — туманность большая.':'Создайте папку или файл кнопками на панели сверху. Или через терминал: touch идея.txt'}</span></div>`));}
     const frag=document.createDocumentFragment();
     list.forEach(n=>{
-      frag.appendChild(el(`<div class="fitem ${sel.has(n.id)?'sel':''}" data-id="${n.id}" tabindex="0">
-        ${fileIcon(n)}<span class="fname">${esc(n.name)}</span>
+      const nm=nameOf(n);
+      frag.appendChild(el(`<div class="fitem ${sel.has(n.id)?'sel':''}" data-id="${n.id}" tabindex="0" title="${esc(nm)}">
+        ${fileIcon(n)}<span class="fname">${esc(nm)}</span>
         ${view==='list'?`<span class="fmeta">${n.type==='dir'?n.children.length+' эл.':fmtBytes(nodeSize(n))} · ${relTime(n.mtime)}</span>`:''}</div>`));});
     items.appendChild(frag);
     const cnt=list.length;
@@ -111,7 +114,9 @@ mount(body,win,params){
   function pathOf(n){return recent?findPathById(n.id):normPath(path+'/'+n.name);}
   function openNode(n){const p=pathOf(n);if(p)openFileNode(n,p);}
   function startRename(it,n){
-    const nameEl=$('.fname',it);const inp=el(`<input class="rename-inp" value="${esc(n.name)}" spellcheck="false">`);
+    const nameEl=$('.fname',it);
+    if(!nameEl)return;
+    const inp=el(`<input class="rename-inp" value="${esc(nameOf(n))}" spellcheck="false">`);
     nameEl.replaceWith(inp);inp.focus();
     const dot=n.name.lastIndexOf('.');inp.setSelectionRange(0,dot>0?dot:n.name.length);
     let done=false;
@@ -143,11 +148,11 @@ mount(body,win,params){
   });
   function downloadNode(n){const a=document.createElement('a');
     if(n.type==='image'){a.href=n.content;}else{a.href=URL.createObjectURL(new Blob([n.content],{type:'text/plain;charset=utf-8'}));}
-    a.download=n.name;a.click();notify('success','Скачивание',`«${n.name}» отправлен в загрузки браузера.`);}
+    a.download=nameOf(n);a.click();notify('success','Скачивание',`«${nameOf(n)}» отправлен в загрузки браузера.`);}
   function deleteSel(){
     const recs=[];sel.forEach(id=>{const n=currentItems().find(x=>x.id===id);if(!n)return;const p=pathOf(n);if(p){const r=removeNode(p);if(r)recs.push(r);}});
     if(!recs.length)return;sel.clear();render();
-    notify('warn',recs.length>1?`Удалено объектов: ${recs.length}`:'Удалено',`«${recs[0].node.name}»${recs.length>1?' и ещё '+(recs.length-1):''} перемещён в пустоту.`,
+    notify('warn',recs.length>1?`Удалено объектов: ${recs.length}`:'Удалено',`«${nameOf(recs[0].node)}»${recs.length>1?' и ещё '+(recs.length-1):''} перемещён в пустоту.`,
       {label:'Отменить',fn:()=>{recs.forEach(restoreNode);notify('success','Восстановлено','Файлы вернулись на свои места.');}},7000);}
   function createDir(){const n=addNode(path,mkDir('Новая папка'));if(!n)return;render();
     const it=$(`.fitem[data-id="${n.id}"]`,items);if(it)startRename(it,n);}
@@ -170,7 +175,6 @@ mount(body,win,params){
     else if(e.key==='Enter'&&sel.size===1){e.preventDefault();const n=currentItems().find(x=>sel.has(x.id));if(n)openNode(n);}
     else if(e.key==='Backspace'){e.preventDefault();$('.nav-up',body).click();}};
 
-  /* события ФС приходят пачками — сворачиваем их в один рендер */
   const offVfs=bus.on('vfs',()=>{
     if(win.minimized){pending=true;return;}
     clearTimeout(vfsTimer);
