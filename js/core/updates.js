@@ -1,14 +1,15 @@
 import {$,esc} from './utils.js';
-import {VERSION,DEPLOY_STAMP} from './version.js';
+import {VERSION,RUNNING_BUILD,SERVER_BUILD} from './version.js';
 
 /* Владает жизненным циклом обновлений и меткой текущей сборки.
-   Кнопки «проверить обновления» нет: проверка идёт сама при фокусе,
-   возврате на вкладку и раз в 10 минут, а интерфейс появляется,
-   только когда действительно есть новая сборка. */
+   Перезагрузка предлагается ТОЛЬКО когда сборка на сервере действительно
+   отличается от той, что исполняется в этой вкладке — одинаковых хешей
+   в полосе обновления быть не может. */
 
-const COMMIT=(DEPLOY_STAMP.split('·')[0]||'').trim();
+const IS_DEV=RUNNING_BUILD.indexOf('__')===0;
+const COMMIT=IS_DEV?'':RUNNING_BUILD;
 const RELOAD_KEY='nebula.autoReloadAt';
-let reg=null,bar=null,offered=false,reloading=false,userAsked=false;
+let reg=null,bar=null,offered=false,checking=false,reloading=false,userAsked=false;
 const watching=new WeakSet();
 
 function paintLabels(){
@@ -30,12 +31,13 @@ function autoReload(){
   }catch(e){}
   doReload();
 }
-async function nextCommit(){
+async function serverCommit(){
   try{
     const t=await (await fetch('index.html',{cache:'no-cache'})).text();
     const m=t.match(/name="nebula-build"\s+content="([^"]+)"/);
-    return m?m[1].split('·')[0].trim():'';
-  }catch(e){return '';}
+    const c=m?m[1].split('·')[0].trim():'';
+    return c||SERVER_BUILD;
+  }catch(e){return SERVER_BUILD;}
 }
 function dismiss(){
   document.documentElement.classList.remove('has-update');
@@ -44,15 +46,20 @@ function dismiss(){
   b.classList.remove('on');
   setTimeout(()=>b.remove(),280);
 }
-function offer(){
-  if(offered||bar)return;
+async function offer(){
+  if(offered||bar||checking||reloading||IS_DEV)return;
+  checking=true;
+  let next='';
+  try{next=await serverCommit();}finally{checking=false;}
+  /* ключевая проверка: нет разницы — нет полосы */
+  if(!next||next===COMMIT||offered||bar||reloading)return;
   offered=true;
   bar=document.createElement('div');
   bar.id='updateBar';
   bar.setAttribute('role','status');
   bar.setAttribute('aria-live','polite');
   bar.innerHTML=`<span class="upd-ico">🛸</span>
-    <div class="upd-txt"><b>Новая сборка готова</b><span>загружена в фоне</span></div>
+    <div class="upd-txt"><b>Новая сборка готова</b><span>${esc(COMMIT)} → ${esc(next)}</span></div>
     <div class="upd-actions">
       <button class="btn primary sm upd-reload">Перезагрузить</button>
       <button class="btn sm upd-later">Позже</button>
@@ -66,9 +73,6 @@ function offer(){
     else doReload();
   });
   $('.upd-later',bar).addEventListener('click',dismiss);
-  nextCommit().then(c=>{
-    if(c&&bar){const s=$('.upd-txt span',bar);if(s)s.textContent=`${COMMIT||'текущая'} → ${c}`;}
-  });
 }
 function watch(w){
   if(!w||watching.has(w))return;
@@ -80,16 +84,20 @@ function watch(w){
 
 export const Updates={
   commit:COMMIT,
-  stamp:DEPLOY_STAMP,
+  running:RUNNING_BUILD,
+  server:SERVER_BUILD,
   init(){
     paintLabels();
     if(!('serviceWorker' in navigator))return;
     navigator.serviceWorker.addEventListener('message',e=>{
       const d=e.data;
-      if(d&&d.type==='NEBULA_SW_OUTDATED')autoReload();
+      if(!d)return;
+      if(d.type==='NEBULA_SW_OUTDATED')autoReload();
+      else if(d.type==='NEBULA_SW_READY'&&d.build&&COMMIT&&d.build!==COMMIT)offer();
     });
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(userAsked)doReload();
+      else offer();
     });
   },
   register(){
@@ -103,6 +111,8 @@ export const Updates={
       addEventListener('focus',ping);
       document.addEventListener('visibilitychange',()=>{if(!document.hidden)ping();});
       setInterval(ping,10*60*1000);
+      /* страница могла остаться открытой через публикацию — сверяем сразу */
+      offer();
     }).catch(()=>{});
   },
   check(){if(reg)return reg.update().catch(()=>{});return Promise.resolve();}

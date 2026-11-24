@@ -63,6 +63,7 @@ jobs:
           echo "sw.js:      $S"
           fail(){ echo "::error::$1"; exit 1; }
           [ "$V" = "$S" ] || fail "VERSION в sw.js не совпадает с version.js"
+          grep -q "export const RUNNING_BUILD='__BUILD_ID__'" js/core/version.js || fail "в version.js нет placeholder RUNNING_BUILD"
           grep -q "NEBULA OS $V" index.html            || fail "title в index.html не совпадает с версией"
           grep -q "OS · $V" index.html                 || fail "boot-sub в index.html не совпадает с версией"
           grep -q "NEBULA OS $V" 404.html              || fail "404.html не совпадает с версией"
@@ -91,7 +92,9 @@ jobs:
           SHORT="${GITHUB_SHA::7}"
           STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          sed -i "s/__BUILD_ID__/${SHORT}/g" _site/sw.js
+          # один и тот же SHA уходит и в воркер, и в исполняемый модуль версии:
+          # только так вкладка знает, какая сборка в ней реально работает
+          sed -i "s/__BUILD_ID__/${SHORT}/g" _site/sw.js _site/js/core/version.js
           sed -i "s|</head>|<meta name=\"nebula-build\" content=\"${SHORT} · ${STAMP}\"></head>|" _site/index.html
 
           find _site -name '*.map' -delete
@@ -101,12 +104,13 @@ jobs:
       - name: Штампы сборки проставлены
         run: |
           set -euo pipefail
-          if grep -q '__BUILD_ID__' _site/sw.js; then
-            echo "::error::в sw.js остался placeholder __BUILD_ID__"; exit 1
+          if grep -q '__BUILD_ID__' _site/sw.js _site/js/core/version.js; then
+            echo "::error::placeholder __BUILD_ID__ остался в sw.js или version.js"; exit 1
           fi
           grep -q 'name="nebula-build"' _site/index.html || { echo "::error::в index.html нет метки сборки"; exit 1; }
-          echo "sw.js:  $(grep -m1 'const BUILD_ID' _site/sw.js)"
-          echo "html:   $(grep -o '<meta name="nebula-build"[^>]*>' _site/index.html)"
+          echo "sw.js:      $(grep -m1 'const BUILD_ID' _site/sw.js)"
+          echo "version.js: $(grep -m1 'RUNNING_BUILD' _site/js/core/version.js)"
+          echo "html:       $(grep -o '<meta name="nebula-build"[^>]*>' _site/index.html)"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
