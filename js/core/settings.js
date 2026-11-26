@@ -17,7 +17,7 @@ export let settings=Object.assign({
   animations:!matchMedia('(prefers-reduced-motion: reduce)').matches,
   sound:true,volume:70,uiSounds:true,musicVol:80,username:'Космонавт',
   explorerView:'grid',explorerSort:'name',explorerAsc:true,
-  fsAuto:false,fsHint:false
+  fsAuto:false,fsHint:false,devBadge:true
 },store.get('nebula.settings.v1',{}));
 if(!ACCENTS[settings.accent])settings.accent='violet';
 if(!WALL_NAMES[settings.wallpaper])settings.wallpaper='aurora';

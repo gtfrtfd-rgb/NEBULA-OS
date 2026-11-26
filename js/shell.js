@@ -6,6 +6,7 @@ import {session} from './core/session.js';
 import {Audio} from './core/audio.js';
 import {Music} from './core/music.js';
 import {FS,isHandheld} from './core/fullscreen.js';
+import {DevBuild} from './core/devbuild.js';
 import {notifications,notify,markNotificationsRead} from './core/notifications.js';
 import {openContext,closeContext} from './core/context.js';
 import {dialogOpen,cancelDialog} from './core/dialogs.js';
@@ -115,6 +116,7 @@ function openPopover(type){
 export function closePopover(){popState=null;$('#popover').classList.remove('open');}
 function renderPopover(){
   const p=$('#popover');if(!popState)return;
+  if(popState==='dev'){DevBuild.renderPanel(p);return;}
   if(popState==='quick'){
     const fsOn=FS.active(),fsLock=FS.standalone();
     p.innerHTML=`<div class="pop-title"><span>Быстрые настройки</span><button class="ibtn q-theme" title="Сменить тему">${icon(settings.theme==='dark'?'sun':'moon',15)}</button></div>
@@ -200,7 +202,8 @@ export function initShell(){
   $('#powerOn').innerHTML=icon('power',34);
   $('#loginBtn').innerHTML='Войти в систему '+icon('chevR',16);
   $('#trayBell').insertAdjacentHTML('afterbegin',icon('bell',17));
-  renderDesktop();renderDock();syncUser();syncSoundUI();syncWifiUI();syncTrayMusic();syncFsUI();syncThemeColor();tickClock();
+  renderDesktop();renderDock();syncUser();syncSoundUI();syncWifiUI();syncTrayMusic();syncFsUI();syncThemeColor();
+  DevBuild.init();tickClock();
   setInterval(tickClock,1000);
   if(navigator.getBattery){navigator.getBattery().then(b=>{battery.real=true;
     const upd=()=>{battery.level=b.level;battery.charging=b.charging;syncQuickIcon();if(popState==='quick')renderPopover();};
@@ -225,6 +228,7 @@ export function initShell(){
       {icon:'fileplus',label:'Новая заметка',fn:()=>WM.open('editor')},
       {icon:'image',label:'Сменить обои',fn:()=>{const keys=Object.keys(WALL_NAMES);const next=keys[(keys.indexOf(settings.wallpaper)+1)%keys.length];setSetting('wallpaper',next);notify('info','Обои',`Теперь: ${WALL_NAMES[next]}.`);}},
       {icon:FS.active()?'compress':'expand',label:FS.active()?'Выйти из полного экрана':'Полный экран',kbd:'Ctrl+Alt+F',fn:()=>FS.toggle()},
+      {icon:'alert',label:'Версия в разработке',fn:()=>openPopover('dev')},
       {icon:'restart',label:'Обновить',fn:refreshDesktopAnim},'sep',
       {icon:'terminal',label:'Открыть терминал',kbd:'Ctrl+Alt+T',fn:()=>WM.open('terminal')},
       {icon:'activity',label:'Монитор системы',fn:()=>WM.open('monitor')},
@@ -256,6 +260,7 @@ export function initShell(){
       {icon:'minus',label:'Показать рабочий стол',fn:()=>$('#showDesktop').click()},
       {icon:FS.active()?'compress':'expand',label:FS.active()?'Выйти из полного экрана':'Полный экран',fn:()=>FS.toggle()},
       {icon:'activity',label:'Монитор системы',fn:()=>WM.open('monitor')}]);});
+  $('#devChip').addEventListener('click',()=>openPopover('dev'));
   $('#trayFs').addEventListener('click',()=>FS.toggle());
   $('#lockFs').addEventListener('click',()=>FS.toggle());
   $('#trayQuick').addEventListener('click',()=>openPopover('quick'));
@@ -281,6 +286,7 @@ export function initShell(){
     if(a){closeStart();WM.open(a.dataset.app);return;}
     const f=e.target.closest('[data-path]');
     if(f){const p=f.dataset.path,n=nodeAt(p);closeStart();if(n)openFileNode(n,p);}});
+  $('#smDev').addEventListener('click',()=>{closeStart();openPopover('dev');});
   $('#smSettings').addEventListener('click',()=>{closeStart();WM.open('settings');});
   $('#smLock').addEventListener('click',lockScreen);
   $('#smRestart').addEventListener('click',()=>powerAction('restart'));
@@ -339,5 +345,7 @@ export function initShell(){
   bus.on('vfs',()=>{if(startOpen()&&!$('#smSearch').value)renderStart('');});
   bus.on('notifications',()=>{if(popState==='notif')renderPopover();});
   bus.on('fullscreen',()=>{syncFsUI();if(popState==='quick')renderPopover();WM.onViewport();});
+  bus.on('dev:open',()=>openPopover('dev'));
+  bus.on('dev:help',()=>{closePopover();WM.open('help');});
 }
 function isMobileNow(){return innerWidth<=720;}

@@ -7,6 +7,8 @@ import {Music} from './core/music.js';
 import {notify} from './core/notifications.js';
 import {closeContext} from './core/context.js';
 import {FS,isHandheld} from './core/fullscreen.js';
+import {DevBuild} from './core/devbuild.js';
+import {IN_DEV,VERSION} from './core/version.js';
 import {WM} from './wm.js';
 import {closeStart,closePopover,tickClock} from './shell.js';
 
@@ -18,7 +20,16 @@ export function bootSequence(){
   const bs=$('#bootScreen');bs.classList.remove('hide');bs.style.display='';
   $('#bootBar').style.width='0%';$('#bootLog').innerHTML='';
   bootTimers.forEach(clearTimeout);bootTimers=[];
-  const lines=['NEBULA BIOS 6.2 — инициализация…','Проверка памяти: 8192 МБ <span class="ok">OK</span>','Монтирование /dev/stardust… <span class="ok">OK</span>','Загрузка ядра nebula-6.2.0… <span class="ok">OK</span>','Драйвер авроры: <span class="ok">активен</span>','Калибровка гравитации: 9.81 м/с²','Синхронизация звёздного времени… <span class="ok">OK</span>','Запуск NebulaShell…'];
+  const lines=[
+    'NEBULA BIOS 6.2 — инициализация…',
+    'Проверка памяти: 8192 МБ <span class="ok">OK</span>',
+    'Монтирование /dev/stardust… <span class="ok">OK</span>',
+    `Канал сборки: ${IN_DEV?'<span class="warn">разработка '+VERSION+'</span>':'<span class="ok">стабильный</span>'}`,
+    'Загрузка ядра nebula-6.2.0… <span class="ok">OK</span>',
+    'Драйвер авроры: <span class="ok">активен</span>',
+    'Калибровка гравитации: 9.81 м/с²',
+    'Запуск NebulaShell…'
+  ];
   lines.forEach((l,i)=>{bootTimers.push(setTimeout(()=>{
     const d=document.createElement('div');d.innerHTML='▸ '+l;$('#bootLog').appendChild(d);
     while($('#bootLog').children.length>6)$('#bootLog').firstElementChild.remove();
@@ -37,7 +48,6 @@ export function showLock(){
 export function login(){
   if(session.loggedIn)return;
   Audio.init();Audio.resume();
-  /* жест пользователя ещё активен — входим в полный экран сразу */
   if(settings.fsAuto&&isHandheld()&&!FS.active())FS.enter({silent:true});
   session.loggedIn=true;session.bootTime=Date.now();
   document.body.classList.remove('locked');document.body.classList.add('entered');
@@ -49,7 +59,10 @@ export function login(){
       setTimeout(()=>{setSetting('fsHint',true);
         notify('info','Полный экран','Уберите адресную строку браузера — NEBULA займёт весь экран телефона.',{label:'Включить',fn:()=>FS.enter()},9000);},4200);
     }
-    setTimeout(()=>notify('success','Совет пилоту','Правый клик по рабочему столу — контекстное меню. Бросьте окно к краю экрана — оно прилипнет.',null,8000),9500);}
+    if(IN_DEV){
+      setTimeout(()=>{const n=DevBuild.notice();notify('warn',n.title,n.body,n.action,10000);},5600);
+    }
+    setTimeout(()=>notify('success','Совет пилоту','Правый клик по рабочему столу — контекстное меню. Бросьте окно к краю экрана — оно прилипнет.',null,8000),11000);}
 }
 export function lockScreen(){
   closeStart();closePopover();closeContext();

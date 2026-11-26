@@ -10,8 +10,9 @@ import {confirmDlg} from '../core/dialogs.js';
 import {storageInfo,requestPersist,wipeVfs} from '../core/vfs.js';
 import {paintScene,Wall} from '../core/wallpaper.js';
 import {FS,isHandheld} from '../core/fullscreen.js';
+import {DevBuild} from '../core/devbuild.js';
 import {WM} from '../wm.js';
-import {BUILD_LINE,KERNEL,DEPLOY_STAMP} from '../core/version.js';
+import {BUILD_LINE,KERNEL,CHANNEL_LABEL,IN_DEV} from '../core/version.js';
 
 export default {name:'Настройки',icon:'sliders',g:['#8a93c9','#4a5382'],w:730,h:560,minW:480,minH:400,single:true,
 mount(body,win,params){
@@ -48,13 +49,8 @@ mount(body,win,params){
       b.disabled=FS.standalone();}
   }
   function deployLine(){
-    if(!DEPLOY_STAMP)return '';
-    const parts=DEPLOY_STAMP.split('·').map(s=>s.trim());
-    const commit=parts[0]||'';
-    if(!commit)return '';
-    const d=parts[1]?new Date(parts[1]):null;
-    const when=d&&!isNaN(d.getTime())?' · '+d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-    return commit+when;
+    const parts=(DevBuild.commitStamp||'').split('·').map(s=>s.trim());
+    return '';
   }
 
   function render(){renderNav();
@@ -150,10 +146,11 @@ mount(body,win,params){
       syncFsRow();refreshStorage();
     }
     else{
-      const pub=deployLine();
       sb.innerHTML=`<div class="set-h">О системе</div><div class="set-sub">Паспорт космического аппарата.</div>
+      ${DevBuild.bannerHtml()}
       <div class="about-logo">${tileHtml({icon:'logo',g:['#7c6bff','#22d3ee']},58)}<div><b>NEBULA OS</b><span>${BUILD_LINE}</span></div></div>
       <dl class="about-grid">
+        <dt>Канал</dt><dd>${IN_DEV?`<span style="color:var(--amber);font-weight:800">${esc(CHANNEL_LABEL)}</span>`:'стабильный'}</dd>
         <dt>Ядро</dt><dd>${KERNEL}</dd>
         <dt>Оболочка</dt><dd>NebulaShell 1.0</dd>
         <dt>Движок</dt><dd>Vanilla JS · Canvas 2D · Web Audio</dd>
@@ -161,15 +158,22 @@ mount(body,win,params){
         <dt>Режим экрана</dt><dd>${FS.standalone()?'установленное приложение':FS.native()?'нативный полный экран':FS.isPseudo()?'компактный':'окно браузера'}</dd>
         <dt>Экран</dt><dd>${innerWidth} × ${innerHeight}</dd>
         <dt>Платформа</dt><dd>${esc(navigator.userAgentData?.platform||navigator.platform||'космос')}</dd>
-        ${pub?`<dt>Публикация</dt><dd>${esc(pub)}</dd>`:''}
         <dt>Аптайм</dt><dd class="about-up">${fmtUp((Date.now()-session.bootTime)/1000)}</dd></dl>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary about-dev">${icon('alert',14)} Что меняется в 1.1</button>
+        <button class="btn about-help">${icon('help',14)} Справка</button>
+      </div>
       <p style="font-size:11.5px;color:var(--faint);margin-top:16px;line-height:1.6">Сделано с любовью к космосу ✦<br>Каждая нота Волны FM синтезируется заново — записей не существует.<br>Обновления приходят сами: новая сборка загружается в фоне и предлагает перезагрузку.</p>`;
+      DevBuild.wireBanner(sb);
+      $('.about-dev',sb).addEventListener('click',()=>bus.emit('dev:open'));
+      $('.about-help',sb).addEventListener('click',()=>WM.open('help'));
     }}
   const off=bus.on('settings',k=>{
     if(k==='volume'){const r=$('.vol-range',sb);if(r){r.value=settings.volume;r.style.setProperty('--val',r.value+'%');$('.vol-label',sb)?.replaceChildren(settings.volume+'%');}}
     if(k==='sound'){const t=$('[data-set="sound"]',sb);if(t)t.checked=settings.sound;}
     if(k==='musicVol'){const r=$('.mvol-range',sb);if(r){r.value=settings.musicVol;r.style.setProperty('--val',r.value+'%');}}
-    if(k==='fsAuto'){const t=$('.fs-auto',sb);if(t)t.checked=settings.fsAuto;}});
+    if(k==='fsAuto'){const t=$('.fs-auto',sb);if(t)t.checked=settings.fsAuto;}
+    if(k==='devBadge'){const t=$('.dev-badge-tgl',sb);if(t)t.checked=settings.devBadge!==false;}});
   const offVfs=bus.on('vfs',()=>{if(section==='system')queueStorage();});
   const offFs=bus.on('fullscreen',()=>{if(section==='system')syncFsRow();});
   render();

@@ -1,0 +1,92 @@
+/* NEBULA OS — канал разработки: метка, панель, баннеры */
+
+.dev-chip{
+  height:34px; flex:none; display:flex; align-items:center; gap:6px;
+  padding:0 10px; border-radius:10px; position:relative;
+  background:linear-gradient(135deg,rgba(255,180,84,.20),rgba(255,79,163,.20));
+  border:1px solid rgba(255,180,84,.45);
+  color:#ffd6a0; font-size:11.5px; font-weight:800; letter-spacing:.3px;
+  box-shadow:0 0 0 1px rgba(255,180,84,.08), 0 4px 14px rgba(255,140,84,.16);
+  transition:filter .14s,transform .14s,box-shadow .14s;
+}
+.dev-chip[hidden]{ display:none; }
+.dev-chip:hover{ filter:brightness(1.15); transform:translateY(-1px); box-shadow:0 6px 20px rgba(255,140,84,.28); }
+.dev-chip:active{ transform:scale(.95); }
+.dev-chip .dev-dot{ width:7px; height:7px; border-radius:50%; flex:none; background:#ffb454; box-shadow:0 0 9px #ffb454; animation:devPulse 1.6s ease-in-out infinite; }
+@keyframes devPulse{ 50%{ transform:scale(1.5); opacity:.55; } }
+.dev-chip .dev-txt{ font-family:var(--f-m); font-variant-numeric:tabular-nums; }
+.dev-tag{
+  font-family:var(--f-m); font-size:9px; font-weight:800; letter-spacing:1px;
+  padding:2px 5px; border-radius:5px; background:rgba(255,180,84,.22); color:#ffcf94;
+}
+.dev-tag.solid{ background:linear-gradient(135deg,#ffb454,#ff4fa3); color:#2a1005; }
+
+/* панель «версия в разработке» */
+.dev-hero{ display:flex; align-items:center; gap:14px; padding:12px 13px; margin-bottom:10px;
+  background:linear-gradient(135deg,rgba(255,180,84,.14),rgba(255,79,163,.10));
+  border:1px solid rgba(255,180,84,.32); border-radius:14px; }
+.dev-ver{ font-family:var(--f-d); font-size:32px; font-weight:700; line-height:1;
+  background:linear-gradient(135deg,#ffb454,#ff4fa3); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.dev-meta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.dev-meta b{ font-size:13px; color:var(--text); }
+.dev-meta span{ font-family:var(--f-m); font-size:10.5px; color:var(--faint); }
+.dev-note{ font-size:11.5px; line-height:1.6; color:var(--dim); margin-bottom:10px; }
+.dev-legend{ display:flex; gap:10px; font-size:9.5px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; margin-bottom:6px; }
+.dev-legend .ok{ color:var(--green); } .dev-legend .wip{ color:var(--amber); } .dev-legend .plan{ color:var(--faint); }
+.dev-list{ display:flex; flex-direction:column; gap:2px; margin-bottom:12px; }
+.dev-item{ display:flex; align-items:flex-start; gap:9px; padding:7px 8px; border-radius:9px; transition:background .13s; }
+.dev-item:hover{ background:var(--surface2); }
+.dev-item i{ width:7px; height:7px; border-radius:50%; flex:none; margin-top:5px; }
+.dev-item.ok i{ background:var(--green); box-shadow:0 0 8px var(--green); }
+.dev-item.wip i{ background:var(--amber); box-shadow:0 0 8px var(--amber); animation:devPulse 1.8s ease-in-out infinite; }
+.dev-item.plan i{ background:var(--faint); }
+.dev-item .di-t{ flex:1; min-width:0; font-size:11.5px; line-height:1.45; color:var(--dim); }
+.dev-item.ok .di-t{ color:var(--text); }
+.dev-item .di-s{ flex:none; font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; margin-top:2px; }
+.dev-item.ok .di-s{ color:var(--green); } .dev-item.wip .di-s{ color:var(--amber); } .dev-item.plan .di-s{ color:var(--faint); }
+.dev-actions{ display:flex; gap:7px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--border); }
+.dev-actions .btn{ flex:1 1 auto; text-decoration:none; }
+.dev-hide{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:11px; padding-top:10px; border-top:1px solid var(--border); font-size:11.5px; font-weight:600; color:var(--dim); cursor:pointer; }
+
+/* баннер в «О системе» */
+.dev-banner{ display:flex; gap:12px; padding:14px; margin-bottom:14px;
+  background:linear-gradient(135deg,rgba(255,180,84,.13),rgba(255,79,163,.09));
+  border:1px solid rgba(255,180,84,.34); border-radius:16px; }
+.dev-banner .db-ico{ width:34px; height:34px; flex:none; border-radius:11px; display:flex; align-items:center; justify-content:center;
+  background:rgba(255,180,84,.2); color:var(--amber); }
+.dev-banner .db-txt{ flex:1; min-width:0; }
+.dev-banner .db-txt b{ font-size:13.5px; display:block; color:var(--text); }
+.dev-banner .db-txt p{ font-size:11.5px; line-height:1.6; color:var(--dim); margin-top:4px; }
+.dev-banner .dev-hide{ margin-top:10px; }
+
+/* метки на экранах загрузки, входа и в меню Пуск */
+.boot-dev, .lock-dev, .sm-dev{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:5px 12px; border-radius:999px;
+  background:linear-gradient(135deg,rgba(255,180,84,.18),rgba(255,79,163,.18));
+  border:1px solid rgba(255,180,84,.42);
+  font-size:10.5px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase;
+  color:#ffcf94;
+}
+.boot-dev[hidden], .lock-dev[hidden], .sm-dev[hidden]{ display:none; }
+.boot-dev i, .lock-dev i, .sm-dev i{ width:6px; height:6px; border-radius:50%; flex:none; background:#ffb454; box-shadow:0 0 8px #ffb454; animation:devPulse 1.6s ease-in-out infinite; }
+.boot-dev{ margin:-18px 0 26px; }
+.lock-dev{ margin-top:14px; }
+.sm-dev{ margin:9px auto 0; cursor:pointer; transition:filter .14s,transform .14s; }
+.sm-dev:hover{ filter:brightness(1.15); transform:translateY(-1px); }
+#bootLog .warn{ color:#ffb454; }
+
+@media (max-width:720px){
+  .dev-chip{ height:36px; padding:0 8px; gap:5px; }
+  .dev-chip .dev-tag{ display:none; }
+  .dev-ver{ font-size:28px; }
+  .dev-actions .btn{ flex:1 1 100%; }
+  .boot-dev{ margin:-12px 0 18px; }
+}
+@media (max-height:620px){
+  .boot-dev{ margin:-10px 0 14px; padding:4px 10px; font-size:9.5px; }
+  .lock-dev{ margin-top:9px; padding:4px 10px; font-size:9.5px; }
+}
+@media (max-height:430px){
+  .lock-dev{ display:none; }
+}

@@ -1,46 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-label="NEBULA OS — операционная система во вкладке браузера">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-label="NEBULA OS — операционная система во вкладке браузера, версия 1.1 в разработке">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0b0a24"/>
-      <stop offset="48%" stop-color="#08091c"/>
-      <stop offset="100%" stop-color="#05060f"/>
+      <stop offset="0%" stop-color="#0b0a24"/><stop offset="48%" stop-color="#08091c"/><stop offset="100%" stop-color="#05060f"/>
     </linearGradient>
     <radialGradient id="blobV" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#7c6bff" stop-opacity=".55"/>
-      <stop offset="60%" stop-color="#7c6bff" stop-opacity=".16"/>
-      <stop offset="100%" stop-color="#7c6bff" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#7c6bff" stop-opacity=".55"/><stop offset="60%" stop-color="#7c6bff" stop-opacity=".16"/><stop offset="100%" stop-color="#7c6bff" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="blobC" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#22d3ee" stop-opacity=".42"/>
-      <stop offset="60%" stop-color="#22d3ee" stop-opacity=".12"/>
-      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity=".42"/><stop offset="60%" stop-color="#22d3ee" stop-opacity=".12"/><stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="blobM" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ff4fa3" stop-opacity=".40"/>
-      <stop offset="60%" stop-color="#ff4fa3" stop-opacity=".12"/>
-      <stop offset="100%" stop-color="#ff4fa3" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#ff4fa3" stop-opacity=".40"/><stop offset="60%" stop-color="#ff4fa3" stop-opacity=".12"/><stop offset="100%" stop-color="#ff4fa3" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="blobA" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ffb454" stop-opacity=".30"/>
-      <stop offset="100%" stop-color="#ffb454" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#ffb454" stop-opacity=".32"/><stop offset="100%" stop-color="#ffb454" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="core" cx="38%" cy="34%" r="72%">
-      <stop offset="0%" stop-color="#d6ccff"/>
-      <stop offset="55%" stop-color="#7c6bff"/>
-      <stop offset="100%" stop-color="#4326b8"/>
+      <stop offset="0%" stop-color="#d6ccff"/><stop offset="55%" stop-color="#7c6bff"/><stop offset="100%" stop-color="#4326b8"/>
     </radialGradient>
-    <linearGradient id="ringA" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#4f8dff"/>
-    </linearGradient>
-    <linearGradient id="ringB" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ff4fa3"/><stop offset="100%" stop-color="#ffb454"/>
-    </linearGradient>
-    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#ffffff"/><stop offset="62%" stop-color="#d9d5ff"/><stop offset="100%" stop-color="#9d8fff"/>
-    </linearGradient>
-    <linearGradient id="pill" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#7c6bff"/><stop offset="100%" stop-color="#ff4fa3"/>
-    </linearGradient>
+    <linearGradient id="ringA" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#4f8dff"/></linearGradient>
+    <linearGradient id="ringB" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4fa3"/><stop offset="100%" stop-color="#ffb454"/></linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ffffff"/><stop offset="62%" stop-color="#d9d5ff"/><stop offset="100%" stop-color="#9d8fff"/></linearGradient>
+    <linearGradient id="pill" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7c6bff"/><stop offset="100%" stop-color="#e0417f"/></linearGradient>
+    <linearGradient id="devp" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ffb454"/><stop offset="100%" stop-color="#ff4fa3"/></linearGradient>
     <clipPath id="frame"><rect x="0" y="0" width="1280" height="420" rx="28"/></clipPath>
   </defs>
 
@@ -80,37 +62,27 @@
     <text x="302" y="230" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="19" font-weight="500" fill="#a6abd4">Операционная система, которая целиком живёт во вкладке браузера</text>
 
     <g font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="14.5" font-weight="600">
-      <g>
-        <rect x="300" y="272" width="176" height="38" rx="12" fill="#7c6bff" fill-opacity=".14" stroke="#7c6bff" stroke-opacity=".42"/>
-        <text x="388" y="296" fill="#c3b9ff" text-anchor="middle">Оконный менеджер</text>
-      </g>
-      <g>
-        <rect x="488" y="272" width="118" height="38" rx="12" fill="#22d3ee" fill-opacity=".13" stroke="#22d3ee" stroke-opacity=".42"/>
-        <text x="547" y="296" fill="#8fe6f4" text-anchor="middle">IndexedDB</text>
-      </g>
-      <g>
-        <rect x="618" y="272" width="112" height="38" rx="12" fill="#34e0a1" fill-opacity=".13" stroke="#34e0a1" stroke-opacity=".42"/>
-        <text x="674" y="296" fill="#8ef0cb" text-anchor="middle">Терминал</text>
-      </g>
-      <g>
-        <rect x="742" y="272" width="122" height="38" rx="12" fill="#ff4fa3" fill-opacity=".13" stroke="#ff4fa3" stroke-opacity=".42"/>
-        <text x="803" y="296" fill="#ffa7cd" text-anchor="middle">Web Audio</text>
-      </g>
-      <g>
-        <rect x="876" y="272" width="146" height="38" rx="12" fill="#ffb454" fill-opacity=".13" stroke="#ffb454" stroke-opacity=".42"/>
-        <text x="949" y="296" fill="#ffd6a0" text-anchor="middle">PWA · офлайн</text>
-      </g>
+      <g><rect x="300" y="272" width="176" height="38" rx="12" fill="#7c6bff" fill-opacity=".14" stroke="#7c6bff" stroke-opacity=".42"/><text x="388" y="296" fill="#c3b9ff" text-anchor="middle">Оконный менеджер</text></g>
+      <g><rect x="488" y="272" width="118" height="38" rx="12" fill="#22d3ee" fill-opacity=".13" stroke="#22d3ee" stroke-opacity=".42"/><text x="547" y="296" fill="#8fe6f4" text-anchor="middle">IndexedDB</text></g>
+      <g><rect x="618" y="272" width="112" height="38" rx="12" fill="#34e0a1" fill-opacity=".13" stroke="#34e0a1" stroke-opacity=".42"/><text x="674" y="296" fill="#8ef0cb" text-anchor="middle">Терминал</text></g>
+      <g><rect x="742" y="272" width="122" height="38" rx="12" fill="#ff4fa3" fill-opacity=".13" stroke="#ff4fa3" stroke-opacity=".42"/><text x="803" y="296" fill="#ffa7cd" text-anchor="middle">Web Audio</text></g>
+      <g><rect x="876" y="272" width="146" height="38" rx="12" fill="#ffb454" fill-opacity=".13" stroke="#ffb454" stroke-opacity=".42"/><text x="949" y="296" fill="#ffd6a0" text-anchor="middle">PWA · офлайн</text></g>
     </g>
 
     <g>
-      <rect x="1032" y="44" width="204" height="42" rx="21" fill="url(#pill)"/>
-      <text x="1134" y="71" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="15.5" font-weight="800" fill="#ffffff" text-anchor="middle">1.0.3 «Пульсар»</text>
-      <rect x="1032" y="98" width="204" height="36" rx="18" fill="#0d1026" fill-opacity=".8" stroke="#34e0a1" stroke-opacity=".4"/>
-      <circle cx="1058" cy="116" r="4.5" fill="#34e0a1"/>
-      <text x="1074" y="121" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="13.5" font-weight="700" fill="#8ef0cb">0 зависимостей</text>
+      <rect x="1032" y="40" width="204" height="42" rx="21" fill="url(#pill)"/>
+      <text x="1134" y="67" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="15.5" font-weight="800" fill="#ffffff" text-anchor="middle">1.1 «Пульсар»</text>
+
+      <rect x="1032" y="92" width="204" height="36" rx="18" fill="url(#devp)"/>
+      <circle cx="1058" cy="110" r="4.5" fill="#2a1005"/>
+      <text x="1074" y="115" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="800" letter-spacing=".6" fill="#2a1005">В РАЗРАБОТКЕ</text>
+
+      <rect x="1032" y="138" width="204" height="34" rx="17" fill="#0d1026" fill-opacity=".8" stroke="#34e0a1" stroke-opacity=".4"/>
+      <circle cx="1058" cy="155" r="4" fill="#34e0a1"/>
+      <text x="1072" y="160" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#8ef0cb">0 зависимостей</text>
     </g>
 
-    <text x="302" y="360" font-family="ui-monospace,'Cascadia Mono',Consolas,monospace" font-size="13.5" fill="#7076a3">Vanilla JS · Canvas 2D · 33 ES-модуля · 11 приложений</text>
+    <text x="302" y="360" font-family="ui-monospace,'Cascadia Mono',Consolas,monospace" font-size="13.5" fill="#7076a3">Vanilla JS · Canvas 2D · 34 ES-модуля · 11 приложений</text>
     <text x="1236" y="386" font-family="ui-monospace,'Cascadia Mono',Consolas,monospace" font-size="13" fill="#5b6090" text-anchor="end">gtfrtfd-rgb.github.io/NEBULA-OS</text>
   </g>
   <rect x="0.5" y="0.5" width="1279" height="419" rx="28" fill="none" stroke="#7c6bff" stroke-opacity=".28"/>
